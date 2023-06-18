@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"fmt"
 	"log"
 	"os"
@@ -9,9 +8,6 @@ import (
 	"strings"
 )
 
-var logbuf = new(bytes.Buffer)
-
-// var logger = log.New(logbuf, "", log.LstdFlags)
 var logger = log.Default()
 
 type Tree interface {
@@ -25,15 +21,20 @@ type Tree interface {
 	handle() func(Tree, string) error
 }
 
-func writelog() {
-	err := os.WriteFile("./parsetree.log", logbuf.Bytes(), os.ModeType)
-	if err != nil {
-		panic(err)
-	}
-}
-
 func parse(text string, t Tree) error {
-	//defer writelog()
+	logFile, err := os.Create("./tree_log.txt")
+	if err == nil {
+		logger.SetOutput(logFile)
+	}
+	log.Println(err)
+	defer func() {
+		if logFile != nil {
+			err := logFile.Close()
+			if err != nil {
+				panic(err)
+			}
+		}
+	}()
 	text = clear(text)
 	return handle(text, t)
 }
