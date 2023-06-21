@@ -21,6 +21,12 @@ type Tree interface {
 	handle() func(Tree, string) error
 }
 
+type textCube struct {
+	indent string
+	tittle string
+	block  string
+}
+
 func parse(text string, t Tree) error {
 	logFile, err := os.Create("./tree_log.txt")
 	if err == nil {
@@ -44,7 +50,7 @@ func handle(text string, t Tree) error {
 	subTexts := splitText(text, reg)
 	for _, subText := range subTexts {
 		subt := t.newTree()
-		err := fillTree(subt, subText[0], subText[1], subText[2])
+		err := fillTree(subt, subText.block, subText.tittle, subText.indent)
 		if err != nil {
 			return err
 		}
@@ -78,7 +84,7 @@ func fillTree(t Tree, text string, tittle string, indent string) (err error) {
 	return handle(text, t)
 }
 
-func splitText(text string, indentReg *regexp.Regexp) (subs [][]string) {
+func splitText(text string, indentReg *regexp.Regexp) (subs []*textCube) {
 	logger.Println("初始正则表达式：", indentReg)
 	if len(text) == 0 {
 		return
@@ -98,7 +104,7 @@ func splitText(text string, indentReg *regexp.Regexp) (subs [][]string) {
 	indentIndex := indentReg.SubexpIndex(patternName) * 2
 
 	l := len(indexes)
-	subs = make([][]string, len(indexes))
+	subs = make([]*textCube, len(indexes))
 	start, end := indexes[0][indentIndex], -1
 	for i := 0; i < l; i++ {
 		//获取词条最大范围的文本
@@ -110,17 +116,19 @@ func splitText(text string, indentReg *regexp.Regexp) (subs [][]string) {
 			end = indexes[j][indentIndex]
 			subText = text[start:end]
 		}
-		subs[i] = append(subs[i], strings.Trim(subText, "\n\r"))
+		t := new(textCube)
+		subs[i] = t
+		t.block = strings.Trim(subText, "\n\r")
 		start = end
 		//获取词条
 		start2 := indexes[i][0]
 		end2 := indexes[i][1]
-		subs[i] = append(subs[i], strings.Trim(text[start2:end2], "\n\r"))
+		t.tittle = strings.Trim(text[start2:end2], "\n\r")
 		logger.Printf("分割到第%d个词条%s", i, subs[i])
 		//获取词条缩进
 		start2 = indexes[i][indentIndex]
 		end2 = indexes[i][indentIndex+1]
-		subs[i] = append(subs[i], strings.Trim(text[start2:end2], "\n\r"))
+		t.indent = strings.Trim(text[start2:end2], "\n\r")
 	}
 	return
 }
