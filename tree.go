@@ -8,17 +8,18 @@ import (
 	"strings"
 )
 
+const IndentLinePattern = `\n?^?(?P<%s>%s).*`
+
 var logger = log.Default()
 
-type Tree interface {
-	indentReg() *regexp.Regexp
-	tittle() string
+type QuizTree interface {
+	IndentReg() *regexp.Regexp
+	Tittle() string
 	SetTittle(string)
-	content() string
-	setContent(string)
-	newTree() Tree
-	removeTree(Tree)
-	handle() func(Tree, string) error
+	Content() string
+	SetContent(string)
+	NewTree() QuizTree
+	handle() func(QuizTree, string) error
 }
 
 type textCube struct {
@@ -27,7 +28,7 @@ type textCube struct {
 	block  string
 }
 
-func parse(text string, t Tree) error {
+func parse(text string, t QuizTree) error {
 	logFile, err := os.Create("./tree_log.txt")
 	if err == nil {
 		logger.SetOutput(logFile)
@@ -42,14 +43,14 @@ func parse(text string, t Tree) error {
 		}
 	}()
 	text = clear(text)
-	return handle(text, t)
+	return transfer(text, t)
 }
 
-func handle(text string, t Tree) error {
-	reg := t.indentReg()
+func transfer(text string, t QuizTree) error {
+	reg := t.IndentReg()
 	subTexts := splitText(text, reg)
 	for _, subText := range subTexts {
-		subt := t.newTree()
+		subt := t.NewTree()
 		err := fillTree(subt, subText.block, subText.tittle, subText.indent)
 		if err != nil {
 			return err
@@ -58,13 +59,13 @@ func handle(text string, t Tree) error {
 	return nil
 }
 
-func fillTree(t Tree, text string, tittle string, indent string) (err error) {
+func fillTree(t QuizTree, text string, tittle string, indent string) (err error) {
 	defer func() {
 		// 返回前调用用户自定义函数处理数据
 		err = t.handle()(t, indent)
 	}()
 	t.SetTittle(tittle)
-	logger.Println("收录词条：", t.tittle())
+	logger.Println("收录词条：", t.Tittle())
 	//没有下一行则返回
 	lineEndIndex := strings.IndexAny(text, "\n\r")
 	if lineEndIndex == -1 {
@@ -72,16 +73,16 @@ func fillTree(t Tree, text string, tittle string, indent string) (err error) {
 	}
 	text = text[lineEndIndex+1:]
 	//判断是否有子词条
-	if !t.indentReg().MatchString(text) {
-		t.setContent(text)
+	if !t.IndentReg().MatchString(text) {
+		t.SetContent(text)
 		return
 	}
 	//获取子词条的索引
-	sonIndentIndex := t.indentReg().FindStringIndex(text)
+	sonIndentIndex := t.IndentReg().FindStringIndex(text)
 	//取索引前的数据内容
-	t.setContent(text[:sonIndentIndex[0]])
+	t.SetContent(text[:sonIndentIndex[0]])
 	text = strings.TrimLeft(text[sonIndentIndex[0]:], "\n\r")
-	return handle(text, t)
+	return transfer(text, t)
 }
 
 func splitText(text string, indentReg *regexp.Regexp) (subs []*textCube) {
@@ -134,7 +135,7 @@ func splitText(text string, indentReg *regexp.Regexp) (subs []*textCube) {
 }
 
 func NewIndentReg(indent, patternName string) *regexp.Regexp {
-	pattern := fmt.Sprintf(`\n?^?(?P<%s>%s).*`, patternName, regexp.QuoteMeta(indent))
+	pattern := fmt.Sprintf(IndentLinePattern, patternName, regexp.QuoteMeta(indent))
 	indentReg, err := regexp.Compile(pattern)
 	if err != nil {
 		logger.Panicln(err)

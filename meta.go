@@ -16,7 +16,7 @@ type TextBlock struct {
 	prev          *TextBlock
 	subBlocks     []*TextBlock
 	indentRegFunc func() *regexp.Regexp
-	handleFunc    func(Tree, string) error
+	handleFunc    func(QuizTree, string) error
 }
 
 func (t *TextBlock) Prev() quiz.QText {
@@ -31,11 +31,11 @@ func (t *TextBlock) Subs() []quiz.QText {
 	return qts
 }
 
-func (t *TextBlock) indentReg() *regexp.Regexp {
+func (t *TextBlock) IndentReg() *regexp.Regexp {
 	return t.indentRegFunc()
 }
 
-func (t *TextBlock) tittle() string {
+func (t *TextBlock) Tittle() string {
 	return t.name
 }
 
@@ -43,21 +43,21 @@ func (t *TextBlock) SetTittle(s string) {
 	t.name = s
 }
 
-func (t *TextBlock) content() string {
+func (t *TextBlock) Content() string {
 	return t.statement
 }
 
-func (t *TextBlock) setContent(s string) {
+func (t *TextBlock) SetContent(s string) {
 	t.statement = s
 }
 
-func (t *TextBlock) newTree() Tree {
+func (t *TextBlock) NewTree() QuizTree {
 	n := new(TextBlock)
 	t.appendSub(n)
 	return n
 }
 
-func (t *TextBlock) removeTree(tree Tree) {
+func (t *TextBlock) removeTree(tree QuizTree) {
 	i := 0
 	element := tree.(*TextBlock)
 	for _, sub := range t.subBlocks {
@@ -69,7 +69,7 @@ func (t *TextBlock) removeTree(tree Tree) {
 	t.subBlocks = t.subBlocks[:i]
 }
 
-func (t *TextBlock) handle() func(Tree, string) error {
+func (t *TextBlock) handle() func(QuizTree, string) error {
 	return t.handleFunc
 }
 

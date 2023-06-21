@@ -52,7 +52,7 @@ func scanDocument(s string) (*TextBlock, error) {
 func newDocument(fileName string) *TextBlock {
 	document := new(TextBlock)
 	document.name = fileName
-	document.handleFunc = func(tree Tree, indent string) error {
+	document.handleFunc = func(tree QuizTree, indent string) error {
 		element := tree.(*TextBlock)
 		parseName(element, indent)
 		parseStatement(element, indent)
