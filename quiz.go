@@ -1,6 +1,7 @@
 package main
 
 import (
+	"example.com/bryce/quiz"
 	"fmt"
 	"log"
 	"math/rand"
@@ -56,7 +57,8 @@ func test(s string) error {
 		return err
 	}
 	if document != nil {
-		startQuiz(document)
+		engine := quiz.NewTextEngine(document)
+		engine.Start()
 	}
 	return nil
 }
@@ -64,10 +66,10 @@ func test(s string) error {
 func startQuiz(tb *TextBlock) {
 	fmt.Println(Welcome)
 	fmt.Println(BeginQuiz)
-	quiz(tb)
+	quizOld(tb)
 }
 
-func quiz(tb *TextBlock) {
+func quizOld(tb *TextBlock) {
 	EnterNewWd(tb)
 	checkTag(tb)
 	show(tb.statement)
@@ -76,7 +78,7 @@ func quiz(tb *TextBlock) {
 	//time.Sleep(time.Second * 2)
 	for i := 0; i < len(tb.subBlocks); i++ {
 		sube := tb.subBlocks[i]
-		quiz(sube)
+		quizOld(sube)
 		ReturnOldWd(sube)
 	}
 }

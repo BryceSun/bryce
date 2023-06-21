@@ -1,19 +1,34 @@
 package main
 
-import "regexp"
+import (
+	"example.com/bryce/quiz"
+	"regexp"
+)
 
 type TextBlock struct {
-	name          string
-	code          string
-	tag           string
-	key           string
+	name          string   `quiz:"${name}的${tail}是:,head"`
+	code          string   `quiz:"代码,false,hide"`
+	tag           string   `quiz:"答案,true,show"`
+	key           string   `quiz:"重点,false,show"`
+	attention     []string `quiz:"第${i}个口诀,true,show"`
+	statement     string   `quiz:"内容,false,show"`
 	hasQuiz       bool
-	attention     []string
-	statement     string
 	prev          *TextBlock
 	subBlocks     []*TextBlock
 	indentRegFunc func() *regexp.Regexp
 	handleFunc    func(Tree, string) error
+}
+
+func (t *TextBlock) Prev() quiz.QText {
+	return t.prev
+}
+
+func (t *TextBlock) Subs() []quiz.QText {
+	var qts []quiz.QText
+	for _, sub := range t.subBlocks {
+		qts = append(qts, sub)
+	}
+	return qts
 }
 
 func (t *TextBlock) indentReg() *regexp.Regexp {

@@ -1,9 +1,8 @@
 module example.com/bryce
 
-go 1.14
+go 1.20
 
 require (
-	github.com/gin-gonic/gin v1.5.0
 	github.com/go-playground/universal-translator v0.17.0 // indirect
 	github.com/go-toast/toast v0.0.0-20190211030409-01e6764cf0a4
 	github.com/golang/protobuf v1.3.5 // indirect
