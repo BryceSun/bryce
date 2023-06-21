@@ -1,7 +1,6 @@
 package main
 
 import (
-	"example.com/bryce/quiz"
 	"fmt"
 	"log"
 	"math/rand"
@@ -50,18 +49,6 @@ var (
 )
 
 var wd string
-
-func test(s string) error {
-	document, err := scanDocument(s)
-	if err != nil {
-		return err
-	}
-	if document != nil {
-		engine := quiz.NewTextEngine(document)
-		engine.Start()
-	}
-	return nil
-}
 
 func startQuiz(tb *TextBlock) {
 	fmt.Println(Welcome)
