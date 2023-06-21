@@ -16,7 +16,7 @@ type TextBlock struct {
 	prev          *TextBlock
 	subBlocks     []*TextBlock
 	indentRegFunc func() *regexp.Regexp
-	handleFunc    func(QuizTree, string) error
+	handleFunc    func(quiz.Tree, string) error
 }
 
 func (t *TextBlock) Prev() quiz.QText {
@@ -51,13 +51,13 @@ func (t *TextBlock) SetContent(s string) {
 	t.statement = s
 }
 
-func (t *TextBlock) NewTree() QuizTree {
+func (t *TextBlock) NewTree() quiz.Tree {
 	n := new(TextBlock)
 	t.appendSub(n)
 	return n
 }
 
-func (t *TextBlock) removeTree(tree QuizTree) {
+func (t *TextBlock) removeTree(tree quiz.Tree) {
 	i := 0
 	element := tree.(*TextBlock)
 	for _, sub := range t.subBlocks {
@@ -69,7 +69,7 @@ func (t *TextBlock) removeTree(tree QuizTree) {
 	t.subBlocks = t.subBlocks[:i]
 }
 
-func (t *TextBlock) handle() func(QuizTree, string) error {
+func (t *TextBlock) Handle() func(quiz.Tree, string) error {
 	return t.handleFunc
 }
 

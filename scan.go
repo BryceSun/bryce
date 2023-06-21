@@ -1,6 +1,7 @@
 package main
 
 import (
+	"example.com/bryce/quiz"
 	"fmt"
 	"log"
 	"os"
@@ -44,7 +45,7 @@ func scanDocument(s string) (*TextBlock, error) {
 	file = file[:strings.Index(file, ".")]
 	document := newDocument(file)
 	//先格式化，去除冗余字符
-	err = parse(string(content), document)
+	err = quiz.Parse(string(content), document)
 	return document, nil
 }
 
@@ -52,7 +53,7 @@ func scanDocument(s string) (*TextBlock, error) {
 func newDocument(fileName string) *TextBlock {
 	document := new(TextBlock)
 	document.name = fileName
-	document.handleFunc = func(tree QuizTree, indent string) error {
+	document.handleFunc = func(tree quiz.Tree, indent string) error {
 		element := tree.(*TextBlock)
 		parseName(element, indent)
 		parseStatement(element, indent)
@@ -74,8 +75,8 @@ func parseStatement(tb *TextBlock, indent string) {
 }
 
 func parseName(tb *TextBlock, indent string) {
-	logger.Println("解析前词条：", tb.name, tb.tag)
-	logger.Println("解析前缩进：", indent)
+	log.Println("解析前词条：", tb.name, tb.tag)
+	log.Println("解析前缩进：", indent)
 	name := strings.TrimPrefix(tb.name, indent)
 	if strings.Contains(indent, BoldDelim) {
 		name = strings.TrimSuffix(name, BoldDelim)
@@ -93,5 +94,5 @@ func parseName(tb *TextBlock, indent string) {
 		entry := strings.Split(name, TagDelim)
 		tb.name, tb.tag = entry[0], entry[1]
 	}
-	logger.Println("解析后词条：", tb.name, tb.tag)
+	log.Println("解析后词条：", tb.name, tb.tag)
 }

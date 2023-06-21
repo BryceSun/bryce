@@ -1,4 +1,4 @@
-package main
+package util
 
 import (
 	"regexp"
@@ -15,21 +15,20 @@ var (
 	TailSpaceReg = regexp.MustCompile(TailSpaceExp)
 )
 
-func clear(s string) string {
+func Clear(s string) string {
 	s = strings.TrimSpace(s)
-	//todo 去除无意义的行
-	s = removeSpaceLine(s)
-	return removeTailSpace(s)
+	s = RemoveSpaceLine(s)
+	return RemoveTailSpace(s)
 }
 
-func removeSpaceLine(s string) string {
+func RemoveSpaceLine(s string) string {
 	if SpaceLineReg.MatchString(s) {
 		return SpaceLineReg.ReplaceAllString(s, "\n")
 	}
 	return s
 }
 
-func removeTailSpace(s string) string {
+func RemoveTailSpace(s string) string {
 	if TailSpaceReg.MatchString(s) {
 		return TailSpaceReg.ReplaceAllString(s, "\n")
 	}

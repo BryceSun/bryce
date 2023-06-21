@@ -1,6 +1,7 @@
-package main
+package quiz
 
 import (
+	"example.com/bryce/util"
 	"fmt"
 	"log"
 	"os"
@@ -10,16 +11,16 @@ import (
 
 const IndentLinePattern = `\n?^?(?P<%s>%s).*`
 
-var logger = log.Default()
+var Logger = log.Default()
 
-type QuizTree interface {
+type Tree interface {
 	IndentReg() *regexp.Regexp
 	Tittle() string
 	SetTittle(string)
 	Content() string
 	SetContent(string)
-	NewTree() QuizTree
-	handle() func(QuizTree, string) error
+	NewTree() Tree
+	Handle() func(Tree, string) error
 }
 
 type textCube struct {
@@ -28,10 +29,10 @@ type textCube struct {
 	block  string
 }
 
-func parse(text string, t QuizTree) error {
+func Parse(text string, t Tree) error {
 	logFile, err := os.Create("./tree_log.txt")
 	if err == nil {
-		logger.SetOutput(logFile)
+		Logger.SetOutput(logFile)
 	}
 	log.Println(err)
 	defer func() {
@@ -42,11 +43,11 @@ func parse(text string, t QuizTree) error {
 			}
 		}
 	}()
-	text = clear(text)
+	text = util.Clear(text)
 	return transfer(text, t)
 }
 
-func transfer(text string, t QuizTree) error {
+func transfer(text string, t Tree) error {
 	reg := t.IndentReg()
 	subTexts := splitText(text, reg)
 	for _, subText := range subTexts {
@@ -59,13 +60,13 @@ func transfer(text string, t QuizTree) error {
 	return nil
 }
 
-func fillTree(t QuizTree, text string, tittle string, indent string) (err error) {
+func fillTree(t Tree, text string, tittle string, indent string) (err error) {
 	defer func() {
 		// 返回前调用用户自定义函数处理数据
-		err = t.handle()(t, indent)
+		err = t.Handle()(t, indent)
 	}()
 	t.SetTittle(tittle)
-	logger.Println("收录词条：", t.Tittle())
+	Logger.Println("收录词条：", t.Tittle())
 	//没有下一行则返回
 	lineEndIndex := strings.IndexAny(text, "\n\r")
 	if lineEndIndex == -1 {
@@ -86,19 +87,19 @@ func fillTree(t QuizTree, text string, tittle string, indent string) (err error)
 }
 
 func splitText(text string, indentReg *regexp.Regexp) (subs []*textCube) {
-	logger.Println("初始正则表达式：", indentReg)
+	Logger.Println("初始正则表达式：", indentReg)
 	if len(text) == 0 {
 		return
 	}
 	if !indentReg.MatchString(text) {
-		logger.Panicln("文本不能被初始缩进正则表达式匹配")
+		Logger.Panicln("文本不能被初始缩进正则表达式匹配")
 		return
 	}
 	firstindent := indentReg.FindString(text)
 	patternName := "indent"
 	indentReg = NewIndentReg(firstindent, patternName)
 	if !indentReg.MatchString(text) {
-		logger.Panicln("文本不能被缩进正则表达式匹配, 表达式：", indentReg)
+		Logger.Panicln("文本不能被缩进正则表达式匹配, 表达式：", indentReg)
 		return
 	}
 	indexes := indentReg.FindAllStringSubmatchIndex(text, -1)
@@ -125,7 +126,7 @@ func splitText(text string, indentReg *regexp.Regexp) (subs []*textCube) {
 		start2 := indexes[i][0]
 		end2 := indexes[i][1]
 		t.tittle = strings.Trim(text[start2:end2], "\n\r")
-		logger.Printf("分割到第%d个词条%s", i, subs[i])
+		Logger.Printf("分割到第%d个词条%s", i, subs[i])
 		//获取词条缩进
 		start2 = indexes[i][indentIndex]
 		end2 = indexes[i][indentIndex+1]
@@ -138,7 +139,7 @@ func NewIndentReg(indent, patternName string) *regexp.Regexp {
 	pattern := fmt.Sprintf(IndentLinePattern, patternName, regexp.QuoteMeta(indent))
 	indentReg, err := regexp.Compile(pattern)
 	if err != nil {
-		logger.Panicln(err)
+		Logger.Panicln(err)
 	}
 	return indentReg
 }
