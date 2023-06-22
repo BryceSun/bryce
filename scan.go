@@ -31,7 +31,7 @@ func scanPlus(s string) error {
 }
 
 func scan(s string) (*TextBlock, error) {
-	if !strings.HasPrefix(s, Ext) {
+	if !strings.HasSuffix(s, Ext) {
 		log.Panic("必须是md文件")
 	}
 	t := new(TextBlock)

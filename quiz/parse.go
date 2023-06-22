@@ -1,22 +1,20 @@
 package quiz
 
 import (
+	"example.com/bryce/util"
 	"fmt"
-	"os"
 	"reflect"
-	"strconv"
 	"strings"
 )
 
 const (
 	// TagKey 字段标签中的键名
-	TagKey    = "quiz"
-	VHead     = "head"
-	VHide     = "hide"
-	VTest     = "true"
-	NameKey   = "tail"
-	IndexIKey = "i"
-	IndexJKey = "j"
+	TagKey = "quiz"
+	VHide  = "hide"
+	VCheck = "check"
+	VHead  = "head"
+	IFlag  = "${i}"
+	KFlag  = "${k}"
 )
 
 type EntryQuiz struct {
@@ -25,96 +23,101 @@ type EntryQuiz struct {
 	isTest  bool
 }
 
-func parseQText(text QText) []*EntryQuiz {
-	var entrys []*EntryQuiz
-	testMap := map[string]string{}
-	stateMap := map[string]string{}
-	qtValue := reflect.ValueOf(text)
-	if qtValue.Kind() == reflect.Ptr {
-		qtValue = reflect.Indirect(qtValue)
+func fieldMap(v reflect.Value) map[string]string {
+	m := map[string]string{}
+	t := v.Type()
+	for i := 0; i < t.NumField(); i++ {
+		ftype := t.Field(i)
+		fvalue := v.Field(i)
+		m[ftype.Name] = fvalue.String()
 	}
-	if qtValue.Kind() != reflect.Struct {
+	return m
+}
+
+// 解析QText字段生成词条
+func parseQText(text QText) []*EntryQuiz {
+	qtValue := reflect.ValueOf(text)
+	return parse(qtValue)
+}
+
+// 截取标签标题
+func getQuizTittle(tag string) string {
+	i := strings.LastIndexByte(tag, '|')
+	if i > 0 {
+		return tag[i+1:]
+	}
+	return ""
+}
+
+// 解析结构体字段生成词条
+func parse(v reflect.Value) []*EntryQuiz {
+	var entries []*EntryQuiz
+	if v.Kind() == reflect.Pointer {
+		v = reflect.Indirect(v)
+	}
+	if v.Kind() != reflect.Struct {
 		return nil
 	}
-	tbType := qtValue.Type()
-	numField := tbType.NumField()
-	quizHead := ""
-	for i := 0; i < numField; i++ {
-		field := tbType.Field(i)
-		fieldValue := qtValue.Field(i)
-		tag := field.Tag
-		tagv := tag.Get(TagKey)
-		if tagv == "" {
+	qtType := v.Type()
+	xpMap := fieldMap(v)
+	for i := 0; i < qtType.NumField(); i++ {
+		field := qtType.Field(i)
+		fieldValue := v.Field(i)
+		tagv := field.Tag.Get(TagKey)
+		if strings.TrimSpace(tagv) == "" || strings.Contains(tagv, VHide) || fieldValue.IsZero() {
 			continue
 		}
-		quizName := getQuizName(tagv)
+		tittle := getQuizTittle(tagv)
+		tittle = util.Expand(tittle, xpMap)
+		isTest := strings.Contains(tagv, VCheck)
 		if strings.Contains(tagv, VHead) {
-			quizHead = quizName
-			loc := fmt.Sprintf("${%s}", field.Name)
-			quizHead = strings.ReplaceAll(quizHead, loc, fieldValue.String())
+			entries = append(entries, &EntryQuiz{tittle, "", isTest})
 			continue
 		}
-		if strings.Contains(tagv, VHide) {
-			continue
-		}
-		if strings.Contains(tagv, VTest) {
-			setQuizMap(testMap, quizHead, quizName, fieldValue)
-		} else {
-			setQuizMap(stateMap, quizHead, quizName, fieldValue)
-		}
+		entries = append(entries, getEntries(fieldValue, tittle, isTest)...)
 	}
-	entrys = append(entrys, transferToEntrys(stateMap, false)...)
-	entrys = append(entrys, transferToEntrys(testMap, true)...)
-	return entrys
+	return entries
 }
 
-func transferToEntrys(quizMap map[string]string, isTest bool) []*EntryQuiz {
-	var entrys []*EntryQuiz
-	for k, v := range quizMap {
-		if strings.TrimSpace(v) != "" {
-			entrys = append(entrys, &EntryQuiz{k, v, isTest})
-		}
-	}
-	return entrys
-}
-
-func getQuizName(tag string) string {
-	i := strings.IndexRune(tag, ',')
-	if i > 0 {
-		return tag[:i]
-	}
-	return tag
-}
-
-func setQuizMap(quizMap map[string]string, quizHead string, quizName string, value reflect.Value) {
-	i := 0
-	expandfunc := func(s string) string {
-		switch s {
-		case NameKey:
-			return quizName
-		case IndexIKey, IndexJKey:
-			return strconv.Itoa(i + 1)
-		default:
-			return ""
-		}
-	}
-	setMap := func(name string, answer string) {
-		quiz := os.Expand(name, expandfunc)
-		quizMap[quiz] = answer
-	}
+// 根据变量值，词条标题，和测试标志生成词条
+func getEntries(value reflect.Value, tittle string, isTest bool) []*EntryQuiz {
+	var entries []*EntryQuiz
+	tittle1 := tittle
 	switch value.Kind() {
-	case reflect.String:
-		setMap(quizHead, value.String())
-	case reflect.Array, reflect.Slice:
-		for ; i < value.Len(); i++ {
-			v := value.Index(i)
-			quizHead := os.Expand(quizHead, expandfunc)
-			if v.Kind() == reflect.String {
-				setMap(quizHead, v.String())
+	case reflect.Struct:
+		if strings.TrimSpace(tittle) != "" {
+			entries = append(entries, &EntryQuiz{tittle, "", false})
+		}
+		return append(entries, parse(value)...)
+
+	case reflect.Pointer:
+		return getEntries(value.Elem(), tittle, isTest)
+
+	case reflect.Map:
+		r := value.MapRange()
+		for r.Next() {
+			k, v := r.Key().String(), r.Value().String()
+			if strings.TrimSpace(tittle) != "" {
+				tittle1 = strings.Replace(tittle, KFlag, k, 1)
 			}
-			if v.Kind() == reflect.Array {
-				setQuizMap(quizMap, quizHead, quizName, v)
+			entries = append(entries, &EntryQuiz{tittle1, v, isTest})
+		}
+		return entries
+
+	case reflect.Array, reflect.Slice:
+		for i := 0; i < value.Len(); i++ {
+			v := value.Index(i)
+			tittle1 = strings.Replace(tittle, IFlag, fmt.Sprint(i+1), 1)
+			switch v.Kind() {
+			case reflect.Struct:
+				entries = append(entries, parse(value)...)
+			case reflect.Pointer:
+				entries = append(entries, getEntries(v.Elem(), tittle1, isTest)...)
+			default:
+				entries = append(entries, getEntries(value, tittle1, isTest)...)
 			}
 		}
+		return entries
 	}
+	return append(entries, &EntryQuiz{tittle, value.String(), isTest})
 }

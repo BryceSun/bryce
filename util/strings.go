@@ -34,3 +34,10 @@ func RemoveTailSpace(s string) string {
 	}
 	return s
 }
+
+func Expand(s string, m map[string]string) string {
+	for k, v := range m {
+		s = strings.ReplaceAll(s, "${"+k+"}", v)
+	}
+	return s
+}
