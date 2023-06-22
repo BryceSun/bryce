@@ -12,7 +12,7 @@ func main() {
 }
 
 func test(s string) error {
-	document, err := scanDocument(s)
+	document, err := scan(s)
 	if err != nil {
 		return err
 	}

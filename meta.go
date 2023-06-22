@@ -1,22 +1,24 @@
 package main
 
 import (
+	"example.com/bryce/dissolve"
 	"example.com/bryce/quiz"
-	"regexp"
 )
 
 type TextBlock struct {
-	name          string   `quiz:"${name}的${tail}是:,head"`
-	code          string   `quiz:"代码,false,hide"`
-	tag           string   `quiz:"答案,true,show"`
-	key           string   `quiz:"重点,false,show"`
-	attention     []string `quiz:"第${i}个口诀,true,show"`
-	statement     string   `quiz:"内容,false,show"`
-	hasQuiz       bool
-	prev          *TextBlock
-	subBlocks     []*TextBlock
-	indentRegFunc func() *regexp.Regexp
-	handleFunc    func(quiz.Tree, string) error
+	tittle    string      `quiz:"hide |下面进入${.}部分"`
+	code      string      `quiz:"hide |代码:"`
+	attention []string    `quiz:"check|${tittle}第${i}个口诀:"`
+	statement string      `quiz:"show |内容"`
+	questions []*Question `quiz:"show |第${i}个口诀:"`
+	prev      *TextBlock
+	subBlocks []*TextBlock
+}
+
+type Question struct {
+	topic       string
+	answer      string `quiz:"check  |${topic}的答案是"`
+	explanation string `quiz:"show"`
 }
 
 func (t *TextBlock) Prev() quiz.QText {
@@ -31,16 +33,12 @@ func (t *TextBlock) Subs() []quiz.QText {
 	return qts
 }
 
-func (t *TextBlock) IndentReg() *regexp.Regexp {
-	return t.indentRegFunc()
-}
-
 func (t *TextBlock) Tittle() string {
-	return t.name
+	return t.tittle
 }
 
 func (t *TextBlock) SetTittle(s string) {
-	t.name = s
+	t.tittle = s
 }
 
 func (t *TextBlock) Content() string {
@@ -51,37 +49,20 @@ func (t *TextBlock) SetContent(s string) {
 	t.statement = s
 }
 
-func (t *TextBlock) NewTree() quiz.Tree {
+func (t *TextBlock) NewTree() dissolve.Tree {
 	n := new(TextBlock)
-	t.appendSub(n)
+	n.prev = t
+	t.subBlocks = append(t.subBlocks, n)
 	return n
 }
 
-func (t *TextBlock) removeTree(tree quiz.Tree) {
+func (t *TextBlock) removeTree(s *TextBlock) {
 	i := 0
-	element := tree.(*TextBlock)
 	for _, sub := range t.subBlocks {
-		if sub != element {
+		if sub != s {
 			t.subBlocks[i] = sub
 			i++
 		}
 	}
 	t.subBlocks = t.subBlocks[:i]
-}
-
-func (t *TextBlock) Handle() func(quiz.Tree, string) error {
-	return t.handleFunc
-}
-
-func (t *TextBlock) appendSub(sub *TextBlock) {
-	sub.prev = t
-	sub.handleFunc = t.handleFunc
-	sub.indentRegFunc = t.indentRegFunc
-	t.subBlocks = append(t.subBlocks, sub)
-}
-
-func (t *TextBlock) setHasQuiz() {
-	if len(t.tag) > 0 || len(t.attention) > 0 {
-		t.hasQuiz = true
-	}
 }
