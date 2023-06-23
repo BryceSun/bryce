@@ -12,10 +12,10 @@ import (
 // 插件函数的注册名
 var (
 	WelcomeFunKey   = "printWelcome"
-	tittleFunKey    = "printTittle"
-	stateFunKey     = "printState"
-	praiseFunKey    = "printPraise"
-	encourageFunKey = "PrintEncourage"
+	TittleFunKey    = "printTittle"
+	StateFunKey     = "printState"
+	PraiseFunKey    = "printPraise"
+	EncourageFunKey = "PrintEncourage"
 	GoodByeFunKey   = "PrintGoodbye"
 )
 
@@ -27,12 +27,14 @@ type QText interface {
 }
 
 type TextEngine struct {
-	right       bool   //用户输入是否正确
-	hIndex      int    //过滤器索引
-	locIndex    int    //当前节点在父节点中的索引
+	Right       bool   //用户输入是否正确
+	hIndex      int    //运行前后的过滤器索引
+	eIndex      int    //测试题(词条)过滤器索引
+	locIndex    int    //目标节点在父节点中的索引,定位时会设置这个字段
 	entryIndex  int    //最近一次的词条在词条集合中的索引
+	offset      int    //被忽略输出的词条的次数,即下一个要打印的词条距当下词条的偏移量
 	input       string //用户最近一次的输入
-	headText    QText  //顶端节点
+	HeadText    QText  //顶端节点
 	locText     QText  //定位节点
 	currentText QText
 	quizEntrys  []*EntryQuiz //词条集合
@@ -41,11 +43,14 @@ type TextEngine struct {
 	//once         sync.Once
 	defaultOrder map[string]Handler //保存系统默认插件
 	userOrder    map[string]Handler //保存用户自定义插件
-	userCache    map[string]any     //保存用户自定义数据的内存空间
+	UserCache    map[string]any     //保存用户自定义数据的内存空间
 }
 
 func (tc *TextEngine) Start() {
 	for tc.hIndex < len(tc.rHandlers) {
+		if tc.hIndex == -1 {
+			return
+		}
 		tc.hIndex++
 		err := tc.rHandlers[tc.hIndex-1](tc)
 		if err != nil {
@@ -65,12 +70,12 @@ func NewTextEngine(qt QText) *TextEngine {
 	}
 	engine := &TextEngine{
 		currentText:  qt,
-		headText:     qt,
+		HeadText:     qt,
 		rHandlers:    []Handler{},
 		eHandlers:    []Handler{},
 		defaultOrder: map[string]Handler{},
 		userOrder:    map[string]Handler{},
-		userCache:    map[string]any{},
+		UserCache:    map[string]any{},
 	}
 	return engine
 }
@@ -147,54 +152,66 @@ func (tc *TextEngine) excFuncOrPrintln(funcKey string, s string) {
 }
 
 func (tc *TextEngine) showQuizEntrys() {
-	for i, entry := range tc.quizEntrys {
-		tc.right = false
-		tc.entryIndex = i
-		if !entry.isTest {
-			tc.excFuncOrPrintln(tittleFunKey, entry.tittle)
-			if strings.TrimSpace(entry.content) != "" {
-				tc.excFuncOrPrintln(stateFunKey, entry.content)
+	tc.initEntryRange()
+	for tc.hasNextEntry() {
+		if tc.HasSkip() {
+			tc.skip()
+			continue
+		}
+		entry := tc.nextEntry()
+		tc.Right = false
+		if !entry.IsTest {
+			tc.excFuncOrPrintln(TittleFunKey, entry.Tittle)
+			if strings.TrimSpace(entry.Content) != "" {
+				tc.excFuncOrPrintln(StateFunKey, entry.Content)
 			}
 			continue
 		}
-		for !tc.right {
-			tc.hIndex = 0
+		for !tc.Right {
+			tc.eIndex = 0
 			tc.CheckEntry()
 			if tc.locText != nil {
 				return
 			}
+			if tc.HasSkip() {
+				tc.skip()
+				break
+			}
 		}
 	}
 }
 
-// CheckEntry 展示测试题目前调用拦截器
+// CheckEntry 展示测试题目的前后调用拦截器
 func (tc *TextEngine) CheckEntry() {
-	for tc.hIndex < len(tc.eHandlers) {
-		tc.hIndex++
-		err := tc.eHandlers[tc.hIndex-1](tc)
+	for tc.eIndex < len(tc.eHandlers) {
+		if tc.eIndex == -1 {
+			return
+		}
+		tc.eIndex++
+		err := tc.eHandlers[tc.eIndex-1](tc)
 		if err != nil {
 			panic(err)
 		}
 	}
-	if tc.hIndex != -1 {
+	if tc.eIndex != -1 {
 		tc.scanAndCheck()
-		tc.hIndex = -1
+		tc.eIndex = -1
 	}
 }
 
 func (tc *TextEngine) scanAndCheck() {
-	entry := tc.quizEntrys[tc.entryIndex]
-	answer := entry.content
-	tc.excFuncOrPrintln(tittleFunKey, entry.tittle)
+	entry := tc.CurrentEntry()
+	answer := entry.Content
+	tc.excFuncOrPrintln(TittleFunKey, entry.Tittle)
 	var keyFunc Handler
 	if tc.getUserInput() && tc.input == answer {
-		tc.right = true
-		tc.excFuncOrPrintln(praiseFunKey, "回答正确！")
+		tc.Right = true
+		tc.excFuncOrPrintln(PraiseFunKey, "回答正确！")
 		return
 	}
 	keyFunc = tc.getHandler(tc.input)
 	if keyFunc == nil {
-		tc.excFuncOrPrintln(encourageFunKey, "回答错误！")
+		tc.excFuncOrPrintln(EncourageFunKey, "回答错误！")
 		return
 	}
 	err := keyFunc(tc)
@@ -234,8 +251,13 @@ func (tc *TextEngine) registerOrder(k string, h Handler) {
 	tc.defaultOrder[k] = h
 }
 
-func (tc *TextEngine) RegisterFilter(h Handler) {
+func (tc *TextEngine) RegisterGuardFilter(h Handler) {
 	tc.rHandlers = append(tc.rHandlers, h)
+}
+
+func (tc *TextEngine) RegisterEntryFilter(h Handler) {
+	log.Println("append filter...")
+	tc.eHandlers = append(tc.eHandlers, h)
 }
 
 func (tc *TextEngine) SetToText(text QText) {
@@ -283,4 +305,52 @@ func (tc *TextEngine) setLocIndex() {
 			return
 		}
 	}
+}
+
+func (tc *TextEngine) HasSkip() bool {
+	return tc.offset > 0
+}
+
+func (tc *TextEngine) HasLocate() bool {
+	return tc.locText != nil
+}
+
+// SkipEntryN  跳过N个词条
+func (tc *TextEngine) skip() {
+	tc.offset--
+}
+
+// SetSkipOnce 路过当前词条
+func (tc *TextEngine) SetSkipOnce() {
+	tc.offset = 1
+}
+
+// SetSkipN 跳过N个词条
+func (tc *TextEngine) SetSkipN(n int) {
+	tc.offset = n
+}
+
+// 初始化词条迭代状态,需要配合 hasNextEntry 方法使用
+func (tc *TextEngine) initEntryRange() {
+	tc.entryIndex = -1
+}
+
+// 是否有下一个词条,需要配合 initEntryRange 和 nextEntry 方法使用
+func (tc *TextEngine) hasNextEntry() bool {
+	b := tc.entryIndex < len(tc.quizEntrys)-1
+	if !b {
+		tc.entryIndex = 0
+	}
+	return b
+}
+
+// 取下一个词条,需要配合 hasNextEntry 方法使用
+func (tc *TextEngine) nextEntry() *EntryQuiz {
+	tc.entryIndex++
+	return tc.CurrentEntry()
+}
+
+// CurrentEntry 取当前词条
+func (tc *TextEngine) CurrentEntry() *EntryQuiz {
+	return tc.quizEntrys[tc.entryIndex]
 }

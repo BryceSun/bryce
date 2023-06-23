@@ -1,7 +1,6 @@
 package main
 
 import (
-	"example.com/bryce/quiz"
 	"flag"
 )
 
@@ -17,8 +16,7 @@ func test(s string) error {
 		return err
 	}
 	if document != nil {
-		engine := quiz.NewTextEngine(document)
-		engine.Start()
+		showWith(document)
 	}
 	return nil
 }

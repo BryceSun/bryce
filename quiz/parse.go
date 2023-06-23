@@ -18,9 +18,9 @@ const (
 )
 
 type EntryQuiz struct {
-	tittle  string
-	content string
-	isTest  bool
+	Tittle  string
+	Content string
+	IsTest  bool
 }
 
 func fieldMap(v reflect.Value) map[string]string {
@@ -114,7 +114,8 @@ func getEntries(value reflect.Value, tittle string, isTest bool) []*EntryQuiz {
 			case reflect.Pointer:
 				entries = append(entries, getEntries(v.Elem(), tittle1, isTest)...)
 			default:
-				entries = append(entries, getEntries(value, tittle1, isTest)...)
+				//todo
+				entries = append(entries, getEntries(v, tittle1, isTest)...)
 			}
 		}
 		return entries
