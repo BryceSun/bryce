@@ -4,21 +4,23 @@ import (
 	"example.com/bryce/quiz"
 	"fmt"
 	"math/rand"
+	"strings"
 	"time"
 )
 
 const (
-	SkipKey  = "K"
-	ScoreKey = "S"
-	Quitkey  = "Q"
+	SkipKey    = "K"
+	ScoreKey   = "S"
+	Quitkey    = "Q"
+	PrefixFlag = "%s"
 )
 
 const (
 	Welcome = "欢迎使用子匀问答!" +
 		"\n计分请输入" + ScoreKey +
 		"\n退出请输入" + Quitkey +
-		"\n跳过请输入" + SkipKey + "\n"
-	GoodBye = "就这样算了???不要怂啊!\n期待下次更好的你!\n"
+		"\n跳过请输入" + SkipKey
+	GoodBye = "就这样算了???不要怂啊!\n期待下次更好的你!"
 )
 
 var (
@@ -49,16 +51,18 @@ func showWith(doc *TextBlock) {
 	engine.RegisterOrder("K", skip)
 	engine.RegisterOrder("KK", skip1)
 	engine.RegisterOrder("KKK", skip2)
-	engine.RegisterOrder("KH", skipToHead)
+	engine.RegisterOrder("Q", skipToHead)
 	engine.RegisterOrder(quiz.EncourageFunKey, encourage)
 	engine.RegisterOrder(quiz.PraiseFunKey, praise)
+	engine.RegisterOrder(quiz.TittleFunKey, printTittle)
+	engine.RegisterOrder(quiz.AtferSetEntry, setPath)
 	engine.RegisterOrder("KH", skipToHead)
 	engine.Start()
 }
 func showWelcome(e *quiz.TextEngine) error {
-	fmt.Printf(Welcome)
+	fmt.Printf(PrefixFlag, Welcome+"\n")
 	e.Start()
-	fmt.Printf(GoodBye)
+	fmt.Printf(PrefixFlag, GoodBye+"\n")
 	return nil
 }
 
@@ -75,7 +79,9 @@ func skip1(e *quiz.TextEngine) error {
 }
 
 func skip2(e *quiz.TextEngine) error {
-	e.LocateToNextSection()
+	if !e.LocateToNextSection() {
+		fmt.Println("此位置不支持进行此跳转!!")
+	}
 	return nil
 }
 
@@ -107,11 +113,50 @@ func showSpendedTime(e *quiz.TextEngine) error {
 }
 
 func encourage(e *quiz.TextEngine) error {
-	fmt.Println(Encouragement[rand.Intn(6)])
+	s := getPath(e)
+	fmt.Printf(PrefixFlag, s+Encouragement[rand.Intn(6)]+"\n")
 	return nil
 }
 
 func praise(e *quiz.TextEngine) error {
-	fmt.Println(Praise[rand.Intn(6)])
+	s := getPath(e)
+	fmt.Printf(PrefixFlag, s+Praise[rand.Intn(6)]+"\n")
+	return nil
+}
+
+func printTittle(e *quiz.TextEngine) error {
+	entry := e.CurrentEntry()
+	s := getPath(e)
+	if entry.IsTest {
+		fmt.Printf(PrefixFlag, s+entry.Tittle)
+		return nil
+	}
+	fmt.Printf(PrefixFlag, s+entry.Tittle+"\n")
+	return nil
+}
+
+func getPath(e *quiz.TextEngine) string {
+	p := e.UserCache["path"]
+	if p != nil {
+		return p.(string)
+	}
+	return ""
+}
+func setPath(e *quiz.TextEngine) error {
+	text := e.CurrentText.(*TextBlock)
+	pathKey := "tittles"
+	var path []string
+	p := e.UserCache[pathKey]
+	if p != nil {
+		path = p.([]string)
+		for i, s := range path {
+			if s == text.prev.tittle {
+				path = path[:i+1]
+			}
+		}
+	}
+	path = append(path, text.tittle)
+	e.UserCache[pathKey] = path
+	e.UserCache["path"] = strings.Join(path, ">") + ">|  "
 	return nil
 }

@@ -17,6 +17,7 @@ var (
 	PraiseFunKey    = "printPraise"
 	EncourageFunKey = "PrintEncourage"
 	GoodByeFunKey   = "PrintGoodbye"
+	AtferSetEntry   = "atferSetEntry"
 )
 
 type Handler func(ctx *TextEngine) error
@@ -36,7 +37,7 @@ type TextEngine struct {
 	input       string //用户最近一次的输入
 	HeadText    QText  //顶端节点
 	locText     QText  //定位节点
-	currentText QText
+	CurrentText QText
 	quizEntrys  []*EntryQuiz //词条集合
 	rHandlers   []Handler    //作用于运行前后的过滤器集合
 	eHandlers   []Handler    //作用于测试题前后的过滤器集合
@@ -69,7 +70,7 @@ func NewTextEngine(qt QText) *TextEngine {
 		log.Panicln("非头部节点，不可用")
 	}
 	engine := &TextEngine{
-		currentText:  qt,
+		CurrentText:  qt,
 		HeadText:     qt,
 		rHandlers:    []Handler{},
 		eHandlers:    []Handler{},
@@ -82,20 +83,24 @@ func NewTextEngine(qt QText) *TextEngine {
 
 func (tc *TextEngine) ScanAndTest() {
 	tc.setQuizEntrys()
+	f := tc.getHandler(AtferSetEntry)
+	if f != nil {
+		_ = f(tc)
+	}
 	tc.showQuizEntrys()
-	for _, text := range tc.currentText.Subs() {
+	for _, text := range tc.CurrentText.Subs() {
 		if tc.locText != nil && tc.locText != text {
 			continue
 		}
 		tc.locText = nil
-		tc.currentText = text
+		tc.CurrentText = text
 		tc.ScanAndTest()
 	}
 }
 
 // 设置题集
 func (tc *TextEngine) setQuizEntrys() {
-	tc.quizEntrys = parseQText(tc.currentText)
+	tc.quizEntrys = parseQText(tc.CurrentText)
 }
 
 // LocateTo 重定位到某节点
@@ -105,30 +110,32 @@ func (tc *TextEngine) LocateTo(text QText) {
 }
 
 // LocateToNextText  重定位到下一小节
-func (tc *TextEngine) LocateToNextText() {
+func (tc *TextEngine) LocateToNextText() bool {
 	if tc.locText == nil {
-		tc.locText = tc.currentText
+		tc.locText = tc.CurrentText
 	}
 	tc.setLocIndex()
 	if tc.locToRighText() {
-		return
+		return true
 	}
 	if tc.locToUpperText() && tc.locToRighText() {
-		return
+		return true
 	}
 	tc.locText = nil
+	return false
 }
 
 // LocateToNextSection 重定位到下一大节
-func (tc *TextEngine) LocateToNextSection() {
+func (tc *TextEngine) LocateToNextSection() bool {
 	if tc.locText == nil {
-		tc.locText = tc.currentText
+		tc.locText = tc.CurrentText
 	}
 	tc.setLocIndex()
 	if tc.locToUpperText() && tc.locToRighText() {
-		return
+		return true
 	}
 	tc.locText = nil
+	return false
 }
 
 func showWelcome(tc *TextEngine) {
@@ -261,7 +268,7 @@ func (tc *TextEngine) RegisterEntryFilter(h Handler) {
 }
 
 func (tc *TextEngine) SetToText(text QText) {
-	tc.currentText = text
+	tc.CurrentText = text
 	tc.setLocIndex()
 }
 
@@ -292,7 +299,7 @@ func (tc *TextEngine) locToRighText() bool {
 // 重定位或向父节点移动时需要调用此方法
 func (tc *TextEngine) setLocIndex() {
 	if tc.locText == nil {
-		tc.locText = tc.currentText
+		tc.locText = tc.CurrentText
 	}
 	text := tc.locText
 	if reflect.ValueOf(text.Prev()).IsNil() {
