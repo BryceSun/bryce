@@ -3,6 +3,7 @@ package main
 import (
 	"example.com/bryce/quiz"
 	"fmt"
+	"log"
 	"math/rand"
 	"strings"
 	"time"
@@ -57,19 +58,26 @@ func showWith(doc *TextBlock) {
 	engine.RegisterOrder(quiz.TittleFunKey, printTittle)
 	engine.RegisterOrder(quiz.AtferSetEntry, setPath)
 	engine.RegisterOrder("KH", skipToHead)
-	engine.Start()
+	err := engine.Start()
+	if err != nil {
+		log.Println(err)
+	}
 }
 func showWelcome(e *quiz.TextEngine) error {
 	fmt.Printf(PrefixFlag, Welcome+"\n")
-	e.Start()
+	if err := e.Start(); err != nil {
+		log.Println(err)
+		return err
+	}
 	fmt.Printf(PrefixFlag, GoodBye+"\n")
 	return nil
 }
 
 func skip(e *quiz.TextEngine) error {
 	e.SetSkipOnce()
+	s := getPath(e)
 	entry := e.CurrentEntry()
-	fmt.Println(entry.Tittle, entry.Content)
+	fmt.Printf(PrefixFlag, s+entry.Tittle+entry.Content+"\n")
 	return nil
 }
 
@@ -97,10 +105,13 @@ func showSpendedTime(e *quiz.TextEngine) error {
 	if t != nil {
 		start = t.(time.Time)
 	}
-	e.CheckEntry()
+	if err := e.CheckEntry(); err != nil {
+		return err
+	}
 	switch {
 	case e.Right:
-		fmt.Printf("本次作答用时:%d秒\n", int(time.Since(start).Seconds()))
+		s := getPath(e)
+		fmt.Printf(s+"本次作答用时:%d秒\n", int(time.Since(start).Seconds()))
 		delete(e.UserCache, timeKey)
 		return nil
 	case e.HasLocate() || e.HasSkip():
@@ -157,6 +168,6 @@ func setPath(e *quiz.TextEngine) error {
 	}
 	path = append(path, text.tittle)
 	e.UserCache[pathKey] = path
-	e.UserCache["path"] = strings.Join(path, ">") + ">|  "
+	e.UserCache["path"] = strings.Join(path, "> ") + ">|  "
 	return nil
 }

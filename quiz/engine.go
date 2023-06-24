@@ -11,12 +11,10 @@ import (
 
 // 插件函数的注册名
 var (
-	WelcomeFunKey   = "printWelcome"
 	TittleFunKey    = "printTittle"
 	StateFunKey     = "printState"
 	PraiseFunKey    = "printPraise"
 	EncourageFunKey = "PrintEncourage"
-	GoodByeFunKey   = "PrintGoodbye"
 	AtferSetEntry   = "atferSetEntry"
 )
 
@@ -29,8 +27,9 @@ type QText interface {
 
 type TextEngine struct {
 	Right       bool   //用户输入是否正确
-	hIndex      int    //运行前后的过滤器索引
+	rIndex      int    //运行的过滤器索引
 	eIndex      int    //测试题(词条)过滤器索引
+	cIndex      int    //测试题设置的过滤器索引
 	locIndex    int    //目标节点在父节点中的索引,定位时会设置这个字段
 	entryIndex  int    //最近一次的词条在词条集合中的索引
 	offset      int    //被忽略输出的词条的次数,即下一个要打印的词条距当下词条的偏移量
@@ -40,6 +39,7 @@ type TextEngine struct {
 	CurrentText QText
 	quizEntrys  []*EntryQuiz //词条集合
 	rHandlers   []Handler    //作用于运行前后的过滤器集合
+	cHandlers   []Handler    //作用于词条集合被设置前后的过滤器集合
 	eHandlers   []Handler    //作用于测试题前后的过滤器集合
 	//once         sync.Once
 	defaultOrder map[string]Handler //保存系统默认插件
@@ -47,22 +47,8 @@ type TextEngine struct {
 	UserCache    map[string]any     //保存用户自定义数据的内存空间
 }
 
-func (tc *TextEngine) Start() {
-	for tc.hIndex < len(tc.rHandlers) {
-		if tc.hIndex == -1 {
-			return
-		}
-		tc.hIndex++
-		err := tc.rHandlers[tc.hIndex-1](tc)
-		if err != nil {
-			panic(err)
-		}
-	}
-	//tc.once.Do(tc.ScanAndTest)
-	if tc.hIndex != -1 {
-		tc.ScanAndTest()
-		tc.hIndex = -1
-	}
+func (tc *TextEngine) Start() (err error) {
+	return tc.addFiltersTo(scanAndTest, tc.rHandlers, &tc.rIndex)(tc)
 }
 
 func NewTextEngine(qt QText) *TextEngine {
@@ -81,11 +67,11 @@ func NewTextEngine(qt QText) *TextEngine {
 	return engine
 }
 
-func (tc *TextEngine) ScanAndTest() {
-	tc.setQuizEntrys()
-	f := tc.getHandler(AtferSetEntry)
-	if f != nil {
-		_ = f(tc)
+func scanAndTest(tc *TextEngine) (err error) {
+	tc.cIndex = 0
+	err = tc.addFiltersTo(setQuizEntrys, tc.cHandlers, &tc.cIndex)(tc)
+	if err != nil {
+		return err
 	}
 	tc.showQuizEntrys()
 	for _, text := range tc.CurrentText.Subs() {
@@ -94,13 +80,44 @@ func (tc *TextEngine) ScanAndTest() {
 		}
 		tc.locText = nil
 		tc.CurrentText = text
-		tc.ScanAndTest()
+		if err := scanAndTest(tc); err != nil {
+			return err
+		}
 	}
+	return err
+}
+
+func (tc *TextEngine) addFiltersTo(f Handler, filters []Handler, i *int) (h Handler) {
+	if h = tc.defaultOrder[fmt.Sprint(i)]; h != nil {
+		return h
+	}
+	h = func(ctx *TextEngine) error {
+		for *i < len(filters) {
+			if *i == -1 {
+				return nil
+			}
+			*i++
+			if err := filters[*i-1](ctx); err != nil {
+
+				return err
+			}
+		}
+		if *i != -1 {
+			if err := f(ctx); err != nil {
+				return err
+			}
+			*i = -1
+		}
+		return nil
+	}
+	tc.defaultOrder[fmt.Sprint(i)] = h
+	return h
 }
 
 // 设置题集
-func (tc *TextEngine) setQuizEntrys() {
+func setQuizEntrys(tc *TextEngine) error {
 	tc.quizEntrys = parseQText(tc.CurrentText)
+	return nil
 }
 
 // LocateTo 重定位到某节点
@@ -138,14 +155,6 @@ func (tc *TextEngine) LocateToNextSection() bool {
 	return false
 }
 
-func showWelcome(tc *TextEngine) {
-	tc.excFuncOrPrintln(WelcomeFunKey, "欢迎使用子匀问答！")
-}
-
-func showGoodBye(tc *TextEngine) {
-	tc.excFuncOrPrintln(GoodByeFunKey, "欢迎下次再来！")
-}
-
 func (tc *TextEngine) excFuncOrPrintln(funcKey string, s string) {
 	keyFunc := tc.getHandler(funcKey)
 	if keyFunc != nil {
@@ -176,7 +185,11 @@ func (tc *TextEngine) showQuizEntrys() {
 		}
 		for !tc.Right {
 			tc.eIndex = 0
-			tc.CheckEntry()
+			//展示测试题目的前后调用拦截器
+			err := tc.CheckEntry()
+			if err != nil {
+				return
+			}
 			if tc.locText != nil {
 				return
 			}
@@ -188,25 +201,11 @@ func (tc *TextEngine) showQuizEntrys() {
 	}
 }
 
-// CheckEntry 展示测试题目的前后调用拦截器
-func (tc *TextEngine) CheckEntry() {
-	for tc.eIndex < len(tc.eHandlers) {
-		if tc.eIndex == -1 {
-			return
-		}
-		tc.eIndex++
-		err := tc.eHandlers[tc.eIndex-1](tc)
-		if err != nil {
-			panic(err)
-		}
-	}
-	if tc.eIndex != -1 {
-		tc.scanAndCheck()
-		tc.eIndex = -1
-	}
+func (tc *TextEngine) CheckEntry() (err error) {
+	return tc.addFiltersTo(checkEntry, tc.eHandlers, &tc.eIndex)(tc)
 }
 
-func (tc *TextEngine) scanAndCheck() {
+func checkEntry(tc *TextEngine) (err error) {
 	entry := tc.CurrentEntry()
 	answer := entry.Content
 	tc.excFuncOrPrintln(TittleFunKey, entry.Tittle)
@@ -221,8 +220,8 @@ func (tc *TextEngine) scanAndCheck() {
 		tc.excFuncOrPrintln(EncourageFunKey, "回答错误！")
 		return
 	}
-	err := keyFunc(tc)
-	if err != nil {
+
+	if err = keyFunc(tc); err != nil {
 		log.Println(err)
 	}
 	return
@@ -260,6 +259,11 @@ func (tc *TextEngine) registerOrder(k string, h Handler) {
 
 func (tc *TextEngine) RegisterGuardFilter(h Handler) {
 	tc.rHandlers = append(tc.rHandlers, h)
+}
+
+func (tc *TextEngine) RegisterCoreFilter(h Handler) {
+	log.Println("append core filter...")
+	tc.cHandlers = append(tc.cHandlers, h)
 }
 
 func (tc *TextEngine) RegisterEntryFilter(h Handler) {
