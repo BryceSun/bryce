@@ -6,7 +6,7 @@ import (
 )
 
 type TextBlock struct {
-	tittle    string      `quiz:"show |下面进入<${tittle}>部分"` // head用于表示只展示标签定义的内容
+	tittle    string      `quiz:"hide |下面进入<${tittle}>部分"` // head用于表示只展示标签定义的内容
 	code      string      `quiz:"show |代码:"`
 	attention []string    `quiz:"check|<${tittle}>第${i}个口诀:"`
 	statement string      `quiz:"show |内容"`

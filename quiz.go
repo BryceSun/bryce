@@ -49,6 +49,7 @@ func showWith(doc *TextBlock) {
 	engine = quiz.NewTextEngine(doc)
 	engine.RegisterGuardFilter(showWelcome)
 	engine.RegisterEntryFilter(showSpendedTime)
+	engine.RegisterCoreFilter(setPath)
 	engine.RegisterOrder("K", skip)
 	engine.RegisterOrder("KK", skip1)
 	engine.RegisterOrder("KKK", skip2)
@@ -56,7 +57,6 @@ func showWith(doc *TextBlock) {
 	engine.RegisterOrder(quiz.EncourageFunKey, encourage)
 	engine.RegisterOrder(quiz.PraiseFunKey, praise)
 	engine.RegisterOrder(quiz.TittleFunKey, printTittle)
-	engine.RegisterOrder(quiz.AtferSetEntry, setPath)
 	engine.RegisterOrder("KH", skipToHead)
 	err := engine.Start()
 	if err != nil {
@@ -153,6 +153,7 @@ func getPath(e *quiz.TextEngine) string {
 	}
 	return ""
 }
+
 func setPath(e *quiz.TextEngine) error {
 	text := e.CurrentText.(*TextBlock)
 	pathKey := "tittles"

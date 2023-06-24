@@ -15,7 +15,6 @@ var (
 	StateFunKey     = "printState"
 	PraiseFunKey    = "printPraise"
 	EncourageFunKey = "PrintEncourage"
-	AtferSetEntry   = "atferSetEntry"
 )
 
 type Handler func(ctx *TextEngine) error
@@ -98,7 +97,6 @@ func (tc *TextEngine) addFiltersTo(f Handler, filters []Handler, i *int) (h Hand
 			}
 			*i++
 			if err := filters[*i-1](ctx); err != nil {
-
 				return err
 			}
 		}
