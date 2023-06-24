@@ -206,10 +206,13 @@ func (tc *TextEngine) CheckEntry() (err error) {
 
 func checkEntry(tc *TextEngine) (err error) {
 	entry := tc.CurrentEntry()
-	answer := entry.Content
-	tc.excFuncOrPrintln(TittleFunKey, entry.Tittle)
 	var keyFunc Handler
-	if tc.getUserInput() && tc.input == answer {
+	tc.input = ""
+	for tc.input == "" {
+		tc.excFuncOrPrintln(TittleFunKey, entry.Tittle)
+		tc.input = getUserInput()
+	}
+	if tc.input == entry.Content {
 		tc.Right = true
 		tc.excFuncOrPrintln(PraiseFunKey, "回答正确！")
 		return
@@ -219,22 +222,18 @@ func checkEntry(tc *TextEngine) (err error) {
 		tc.excFuncOrPrintln(EncourageFunKey, "回答错误！")
 		return
 	}
-
 	if err = keyFunc(tc); err != nil {
 		log.Println(err)
 	}
 	return
 }
 
-func (tc *TextEngine) getUserInput() bool {
-	tc.input = ""
+func getUserInput() string {
 	input, err := bufio.NewReader(os.Stdin).ReadString('\n')
 	if err != nil {
 		log.Println(err)
-		return false
 	}
-	tc.input = strings.TrimSpace(input)
-	return true
+	return strings.TrimSpace(input)
 }
 
 func (tc *TextEngine) getHandler(s string) Handler {
