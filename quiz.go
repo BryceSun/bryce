@@ -2,15 +2,12 @@ package main
 
 import (
 	"example.com/bryce/quiz"
+	"example.com/bryce/util"
 	"fmt"
 	"log"
 	"math/rand"
 	"strings"
 	"time"
-)
-
-const (
-	Format = "%s>|  %s"
 )
 
 const (
@@ -20,8 +17,8 @@ const (
 		Prefix + "退出当前程序请输入Q\n" +
 		Prefix + "跳过当前问答请输入K\n" +
 		Prefix + "跳至下一题组请输入KK\n"
-	GoodBye = "就这样算了???不要怂啊!\n" +
-		"期待下次更好的你!"
+	GoodBye = Prefix + "就这样算了???不要怂啊!\n" +
+		Prefix + "期待下次更好的你!"
 )
 
 var (
@@ -41,10 +38,8 @@ var (
 		"我不信你还能过关,再来!",
 		"你这正确率,放在过去那就是状元!",
 	}
+	Prt = util.NewPrinter("", "%s>|  %s")
 )
-
-// var engine *quiz.TextEngine
-var prefix string
 
 func showWith(doc *TextBlock) {
 	engine := quiz.NewTextEngine(doc)
@@ -76,7 +71,7 @@ func showWelcome(e *quiz.TextEngine) error {
 func skip(e *quiz.TextEngine) error {
 	e.SetSkipOnce()
 	entry := e.CurrentEntry()
-	prefixPrintf("%s %s\n", entry.Tittle, entry.Content)
+	Prt.Printf("%s %s\n", entry.Tittle, entry.Content)
 	return nil
 }
 
@@ -87,7 +82,7 @@ func skip1(e *quiz.TextEngine) error {
 
 func skip2(e *quiz.TextEngine) error {
 	if !e.LocateToNextSection() {
-		prefixPrintln("此位置不支持进行此跳转!!")
+		Prt.Println("此位置不支持进行此跳转!!")
 	}
 	return nil
 }
@@ -109,7 +104,7 @@ func showSpendedTime(e *quiz.TextEngine) error {
 	}
 	switch {
 	case e.Right:
-		prefixPrintf("本次作答用时:%d秒\n", int(time.Since(start).Seconds()))
+		Prt.Printf("本次作答用时:%d秒\n", int(time.Since(start).Seconds()))
 		delete(e.UserCache, timeKey)
 		return nil
 	case e.HasLocate() || e.HasSkip():
@@ -122,22 +117,22 @@ func showSpendedTime(e *quiz.TextEngine) error {
 }
 
 func encourage(e *quiz.TextEngine) error {
-	prefixPrintln(Encouragement[rand.Intn(6)])
+	Prt.Println(Encouragement[rand.Intn(6)])
 	return nil
 }
 
 func praise(e *quiz.TextEngine) error {
-	prefixPrintln(Praise[rand.Intn(6)])
+	Prt.Println(Praise[rand.Intn(6)])
 	return nil
 }
 
 func printTittle(e *quiz.TextEngine) error {
 	entry := e.CurrentEntry()
 	if entry.IsTest {
-		prefixPrint(entry.Tittle)
+		Prt.Print(entry.Tittle)
 		return nil
 	}
-	prefixPrintln(entry.Tittle)
+	Prt.Println(entry.Tittle)
 	return nil
 }
 
@@ -157,20 +152,6 @@ func setPath(e *quiz.TextEngine) error {
 	}
 	path = append(path, text.tittle)
 	e.UserCache[pathKey] = path
-	prefix = strings.Join(path, "> ")
+	Prt.Prefix = strings.Join(path, "> ")
 	return nil
-}
-
-func prefixPrintf(format string, a ...any) {
-	s := fmt.Sprintf(format, a...)
-	fmt.Printf(Format, prefix, s)
-}
-
-func prefixPrintln(a ...any) {
-	s := fmt.Sprintln(a...)
-	fmt.Printf(Format, prefix, s)
-}
-func prefixPrint(a ...any) {
-	s := fmt.Sprint(a...)
-	fmt.Printf(Format, prefix, s)
 }
