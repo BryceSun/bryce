@@ -10,18 +10,18 @@ import (
 )
 
 const (
-	SkipKey    = "K"
-	ScoreKey   = "S"
-	Quitkey    = "Q"
-	PrefixFlag = "%s"
+	Format = "%s>|  %s"
 )
 
 const (
-	Welcome = "欢迎使用子匀问答!" +
-		"\n计分请输入" + ScoreKey +
-		"\n退出请输入" + Quitkey +
-		"\n跳过请输入" + SkipKey
-	GoodBye = "就这样算了???不要怂啊!\n期待下次更好的你!"
+	Prefix  = "                 "
+	Welcome = Prefix + "欢迎使用子匀问答!\n" +
+		Prefix + "统计本次得分请输入S\n" +
+		Prefix + "退出当前程序请输入Q\n" +
+		Prefix + "跳过当前问答请输入K\n" +
+		Prefix + "跳至下一题组请输入KK\n"
+	GoodBye = "就这样算了???不要怂啊!\n" +
+		"期待下次更好的你!"
 )
 
 var (
@@ -43,10 +43,11 @@ var (
 	}
 )
 
-var engine *quiz.TextEngine
+// var engine *quiz.TextEngine
+var prefix string
 
 func showWith(doc *TextBlock) {
-	engine = quiz.NewTextEngine(doc)
+	engine := quiz.NewTextEngine(doc)
 	engine.RegisterGuardFilter(showWelcome)
 	engine.RegisterEntryFilter(showSpendedTime)
 	engine.RegisterCoreFilter(setPath)
@@ -57,27 +58,25 @@ func showWith(doc *TextBlock) {
 	engine.RegisterOrder(quiz.EncourageFunKey, encourage)
 	engine.RegisterOrder(quiz.PraiseFunKey, praise)
 	engine.RegisterOrder(quiz.TittleFunKey, printTittle)
-	engine.RegisterOrder("KH", skipToHead)
 	err := engine.Start()
 	if err != nil {
 		log.Println(err)
 	}
 }
 func showWelcome(e *quiz.TextEngine) error {
-	fmt.Printf(PrefixFlag, Welcome+"\n")
+	fmt.Println(Welcome)
 	if err := e.Start(); err != nil {
 		log.Println(err)
 		return err
 	}
-	fmt.Printf(PrefixFlag, GoodBye+"\n")
+	fmt.Println(GoodBye)
 	return nil
 }
 
 func skip(e *quiz.TextEngine) error {
 	e.SetSkipOnce()
-	s := getPath(e)
 	entry := e.CurrentEntry()
-	fmt.Printf(PrefixFlag, s+entry.Tittle+entry.Content+"\n")
+	prefixPrintf("%s %s\n", entry.Tittle, entry.Content)
 	return nil
 }
 
@@ -88,7 +87,7 @@ func skip1(e *quiz.TextEngine) error {
 
 func skip2(e *quiz.TextEngine) error {
 	if !e.LocateToNextSection() {
-		fmt.Println("此位置不支持进行此跳转!!")
+		prefixPrintln("此位置不支持进行此跳转!!")
 	}
 	return nil
 }
@@ -110,8 +109,7 @@ func showSpendedTime(e *quiz.TextEngine) error {
 	}
 	switch {
 	case e.Right:
-		s := getPath(e)
-		fmt.Printf(s+"本次作答用时:%d秒\n", int(time.Since(start).Seconds()))
+		prefixPrintf("本次作答用时:%d秒\n", int(time.Since(start).Seconds()))
 		delete(e.UserCache, timeKey)
 		return nil
 	case e.HasLocate() || e.HasSkip():
@@ -124,34 +122,23 @@ func showSpendedTime(e *quiz.TextEngine) error {
 }
 
 func encourage(e *quiz.TextEngine) error {
-	s := getPath(e)
-	fmt.Printf(PrefixFlag, s+Encouragement[rand.Intn(6)]+"\n")
+	prefixPrintln(Encouragement[rand.Intn(6)])
 	return nil
 }
 
 func praise(e *quiz.TextEngine) error {
-	s := getPath(e)
-	fmt.Printf(PrefixFlag, s+Praise[rand.Intn(6)]+"\n")
+	prefixPrintln(Praise[rand.Intn(6)])
 	return nil
 }
 
 func printTittle(e *quiz.TextEngine) error {
 	entry := e.CurrentEntry()
-	s := getPath(e)
 	if entry.IsTest {
-		fmt.Printf(PrefixFlag, s+entry.Tittle)
+		prefixPrint(entry.Tittle)
 		return nil
 	}
-	fmt.Printf(PrefixFlag, s+entry.Tittle+"\n")
+	prefixPrintln(entry.Tittle)
 	return nil
-}
-
-func getPath(e *quiz.TextEngine) string {
-	p := e.UserCache["path"]
-	if p != nil {
-		return p.(string)
-	}
-	return ""
 }
 
 func setPath(e *quiz.TextEngine) error {
@@ -164,11 +151,26 @@ func setPath(e *quiz.TextEngine) error {
 		for i, s := range path {
 			if s == text.prev.tittle {
 				path = path[:i+1]
+				break
 			}
 		}
 	}
 	path = append(path, text.tittle)
 	e.UserCache[pathKey] = path
-	e.UserCache["path"] = strings.Join(path, "> ") + ">|  "
+	prefix = strings.Join(path, "> ")
 	return nil
+}
+
+func prefixPrintf(format string, a ...any) {
+	s := fmt.Sprintf(format, a...)
+	fmt.Printf(Format, prefix, s)
+}
+
+func prefixPrintln(a ...any) {
+	s := fmt.Sprintln(a...)
+	fmt.Printf(Format, prefix, s)
+}
+func prefixPrint(a ...any) {
+	s := fmt.Sprint(a...)
+	fmt.Printf(Format, prefix, s)
 }
