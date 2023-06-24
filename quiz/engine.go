@@ -47,7 +47,7 @@ type TextEngine struct {
 }
 
 func (tc *TextEngine) Start() (err error) {
-	return tc.addFiltersTo(scanAndTest, tc.rHandlers, &tc.rIndex)(tc)
+	return tc.addFiltersTo(parseAndTest, tc.rHandlers, &tc.rIndex)(tc)
 }
 
 func NewTextEngine(qt QText) *TextEngine {
@@ -66,7 +66,7 @@ func NewTextEngine(qt QText) *TextEngine {
 	return engine
 }
 
-func scanAndTest(tc *TextEngine) (err error) {
+func parseAndTest(tc *TextEngine) (err error) {
 	tc.cIndex = 0
 	err = tc.addFiltersTo(setQuizEntrys, tc.cHandlers, &tc.cIndex)(tc)
 	if err != nil {
@@ -79,7 +79,8 @@ func scanAndTest(tc *TextEngine) (err error) {
 		}
 		tc.locText = nil
 		tc.CurrentText = text
-		if err := scanAndTest(tc); err != nil {
+		if err := parseAndTest(tc); err != nil {
+			log.Println(err)
 			return err
 		}
 	}
@@ -140,7 +141,7 @@ func (tc *TextEngine) LocateToNextText() bool {
 	return false
 }
 
-// LocateToNextSection 重定位到下一大节
+// LocateToNextSection 重定位到下一文本块
 func (tc *TextEngine) LocateToNextSection() bool {
 	if tc.locText == nil {
 		tc.locText = tc.CurrentText
