@@ -25,16 +25,16 @@ type QText interface {
 }
 
 type TextEngine struct {
-	Right       bool   //用户输入是否正确
-	rIndex      int    //运行的过滤器索引
-	eIndex      int    //测试题(词条)过滤器索引
-	cIndex      int    //测试题设置的过滤器索引
-	locIndex    int    //目标节点在父节点中的索引,定位时会设置这个字段
-	entryIndex  int    //最近一次的词条在词条集合中的索引
-	offset      int    //被忽略输出的词条的次数,即下一个要打印的词条距当下词条的偏移量
-	input       string //用户最近一次的输入
-	HeadText    QText  //顶端节点
-	locText     QText  //定位节点
+	Right       bool     //用户输入是否正确
+	rIndex      int      //运行的过滤器索引
+	eIndex      int      //测试题(词条)过滤器索引
+	cIndex      int      //测试题设置的过滤器索引
+	locIndex    int      //目标节点在父节点中的索引,定位时会设置这个字段
+	entryIndex  int      //最近一次的词条在词条集合中的索引
+	offset      int      //被忽略输出的词条的次数,即下一个要打印的词条距当下词条的偏移量
+	input       []string //用户最近一次的输入
+	HeadText    QText    //顶端节点
+	locText     QText    //定位节点
 	CurrentText QText
 	quizEntrys  []*EntryQuiz //词条集合
 	rHandlers   []Handler    //作用于运行前后的过滤器集合
@@ -44,6 +44,10 @@ type TextEngine struct {
 	defaultOrder map[string]Handler //保存系统默认插件
 	userOrder    map[string]Handler //保存用户自定义插件
 	UserCache    map[string]any     //保存用户自定义数据的内存空间
+}
+
+func (tc *TextEngine) Input() []string {
+	return tc.input
 }
 
 func (tc *TextEngine) Start() (err error) {
@@ -169,11 +173,11 @@ func (tc *TextEngine) excFuncOrPrintln(funcKey string, s string) {
 func (tc *TextEngine) showQuizEntrys() {
 	tc.initEntryRange()
 	for tc.hasNextEntry() {
+		entry := tc.nextEntry()
 		if tc.HasSkip() {
 			tc.skip()
 			continue
 		}
-		entry := tc.nextEntry()
 		tc.Right = false
 		if !entry.IsTest {
 			tc.excFuncOrPrintln(TittleFunKey, entry.Tittle)
@@ -207,17 +211,17 @@ func (tc *TextEngine) CheckEntry() (err error) {
 func checkEntry(tc *TextEngine) (err error) {
 	entry := tc.CurrentEntry()
 	var keyFunc Handler
-	tc.input = ""
-	for tc.input == "" {
+	tc.input = tc.input[:0]
+	for len(tc.input) == 0 {
 		tc.excFuncOrPrintln(TittleFunKey, entry.Tittle)
-		tc.input = getUserInput()
+		tc.getUserInput()
 	}
-	if tc.input == entry.Content {
+	if tc.input[0] == entry.Content {
 		tc.Right = true
 		tc.excFuncOrPrintln(PraiseFunKey, "回答正确！")
 		return
 	}
-	keyFunc = tc.getHandler(tc.input)
+	keyFunc = tc.getHandler(tc.input[1])
 	if keyFunc == nil {
 		tc.excFuncOrPrintln(EncourageFunKey, "回答错误！")
 		return
@@ -228,12 +232,17 @@ func checkEntry(tc *TextEngine) (err error) {
 	return
 }
 
-func getUserInput() string {
-	input, err := bufio.NewReader(os.Stdin).ReadString('\n')
+func (tc *TextEngine) getUserInput() {
+	in, err := bufio.NewReader(os.Stdin).ReadString('\n')
 	if err != nil {
 		log.Println(err)
 	}
-	return strings.TrimSpace(input)
+	in = strings.TrimSpace(in)
+	if in == "" {
+		return
+	}
+	tc.input = append(tc.input, in)
+	tc.input = append(tc.input, strings.Split(in, " ")...)
 }
 
 func (tc *TextEngine) getHandler(s string) Handler {
@@ -327,11 +336,6 @@ func (tc *TextEngine) HasLocate() bool {
 // SkipEntryN  跳过N个词条
 func (tc *TextEngine) skip() {
 	tc.offset--
-}
-
-// SetSkipOnce 路过当前词条
-func (tc *TextEngine) SetSkipOnce() {
-	tc.offset = 1
 }
 
 // SetSkipN 跳过N个词条

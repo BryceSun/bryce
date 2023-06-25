@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"math/rand"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -68,11 +69,18 @@ func showWelcome(e *quiz.TextEngine) error {
 	return nil
 }
 
-func skip(e *quiz.TextEngine) error {
-	e.SetSkipOnce()
+func skip(e *quiz.TextEngine) (err error) {
+	n := 1
+	if len(e.Input()) > 2 {
+		n, err = strconv.Atoi(e.Input()[2])
+		if err != nil {
+			return
+		}
+	}
+	e.SetSkipN(n)
 	entry := e.CurrentEntry()
 	Prt.Printf("%s %s\n", entry.Tittle, entry.Content)
-	return nil
+	return
 }
 
 func skip1(e *quiz.TextEngine) error {
