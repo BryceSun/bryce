@@ -28,6 +28,11 @@ func (p *Printer) Print(a ...any) {
 	fmt.Printf(p.Format, p.Prefix, s)
 }
 
+func (p *Printer) Sprint(a ...any) string {
+	s := fmt.Sprint(a...)
+	return fmt.Sprintf(p.Format, p.Prefix, s)
+}
+
 func Printf(format string, a ...any) {
 	printer.Printf(format, a...)
 }
@@ -38,4 +43,8 @@ func Println(a ...any) {
 
 func Print(a ...any) {
 	printer.Print(a...)
+}
+
+func Sprint(a ...any) string {
+	return printer.Sprint(a...)
 }

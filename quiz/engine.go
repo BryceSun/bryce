@@ -51,7 +51,7 @@ func (tc *TextEngine) Input() []string {
 }
 
 func (tc *TextEngine) Start() (err error) {
-	return tc.addFiltersTo(parseAndTest, tc.rHandlers, &tc.rIndex)(tc)
+	return tc.throughFilters(parseAndTest, &tc.rHandlers, &tc.rIndex)(tc)
 }
 
 func NewTextEngine(qt QText) *TextEngine {
@@ -72,11 +72,11 @@ func NewTextEngine(qt QText) *TextEngine {
 
 func parseAndTest(tc *TextEngine) (err error) {
 	tc.cIndex = 0
-	err = tc.addFiltersTo(setQuizEntrys, tc.cHandlers, &tc.cIndex)(tc)
+	err = tc.throughFilters(setQuizEntrys, &tc.cHandlers, &tc.cIndex)(tc)
 	if err != nil {
 		return err
 	}
-	tc.showQuizEntrys()
+	tc.ShowQuizEntrys()
 	for _, text := range tc.CurrentText.Subs() {
 		if tc.locText != nil && tc.locText != text {
 			continue
@@ -91,28 +91,30 @@ func parseAndTest(tc *TextEngine) (err error) {
 	return err
 }
 
-func (tc *TextEngine) addFiltersTo(f Handler, filters []Handler, i *int) (h Handler) {
+// 将给定的f函数包装为附加了过滤链的函数
+func (tc *TextEngine) throughFilters(f Handler, filters *[]Handler, i *int) (h Handler) {
+	//缓存中存在执行过滤链的函数就直接返回
 	if h = tc.defaultOrder[fmt.Sprint(i)]; h != nil {
 		return h
 	}
+	//定义附加了过滤链的函数
 	h = func(ctx *TextEngine) error {
-		for *i < len(filters) {
+		for *i < len(*filters) {
 			if *i == -1 {
 				return nil
 			}
 			*i++
-			if err := filters[*i-1](ctx); err != nil {
+			if err := (*filters)[*i-1](ctx); err != nil {
 				return err
 			}
 		}
-		if *i != -1 {
-			if err := f(ctx); err != nil {
-				return err
-			}
-			*i = -1
+		if *i == -1 {
+			return nil
 		}
-		return nil
+		*i = -1
+		return f(ctx)
 	}
+	//将执行过滤链的函数缓存
 	tc.defaultOrder[fmt.Sprint(i)] = h
 	return h
 }
@@ -170,7 +172,8 @@ func (tc *TextEngine) excFuncOrPrintln(funcKey string, s string) {
 	fmt.Println(s)
 }
 
-func (tc *TextEngine) showQuizEntrys() {
+// ShowQuizEntrys 展示词条或测试
+func (tc *TextEngine) ShowQuizEntrys() {
 	tc.initEntryRange()
 	for tc.hasNextEntry() {
 		entry := tc.nextEntry()
@@ -179,6 +182,7 @@ func (tc *TextEngine) showQuizEntrys() {
 			continue
 		}
 		tc.Right = false
+		//非测试题仅进行内容展示
 		if !entry.IsTest {
 			tc.excFuncOrPrintln(TittleFunKey, entry.Tittle)
 			if strings.TrimSpace(entry.Content) != "" {
@@ -186,14 +190,12 @@ func (tc *TextEngine) showQuizEntrys() {
 			}
 			continue
 		}
+		//测试题如果没被答对或是跳过则反复展示
 		for !tc.Right {
 			tc.eIndex = 0
 			//展示测试题目的前后调用拦截器
 			err := tc.CheckEntry()
 			if err != nil {
-				return
-			}
-			if tc.locText != nil {
 				return
 			}
 			if tc.HasSkip() {
@@ -205,7 +207,7 @@ func (tc *TextEngine) showQuizEntrys() {
 }
 
 func (tc *TextEngine) CheckEntry() (err error) {
-	return tc.addFiltersTo(checkEntry, tc.eHandlers, &tc.eIndex)(tc)
+	return tc.throughFilters(checkEntry, &tc.eHandlers, &tc.eIndex)(tc)
 }
 
 func checkEntry(tc *TextEngine) (err error) {
@@ -326,11 +328,7 @@ func (tc *TextEngine) setLocIndex() {
 }
 
 func (tc *TextEngine) HasSkip() bool {
-	return tc.offset > 0
-}
-
-func (tc *TextEngine) HasLocate() bool {
-	return tc.locText != nil
+	return tc.offset > 0 || tc.locText != nil
 }
 
 // SkipEntryN  跳过N个词条
@@ -363,7 +361,15 @@ func (tc *TextEngine) nextEntry() *EntryQuiz {
 	return tc.CurrentEntry()
 }
 
+func (tc *TextEngine) SetQuizEntrys(quizEntrys []*EntryQuiz) {
+	tc.quizEntrys = quizEntrys
+}
+
 // CurrentEntry 取当前词条
 func (tc *TextEngine) CurrentEntry() *EntryQuiz {
 	return tc.quizEntrys[tc.entryIndex]
+}
+
+func (tc *TextEngine) Save(key string, a any) {
+	tc.UserCache[key] = a
 }

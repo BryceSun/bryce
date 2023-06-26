@@ -9,12 +9,12 @@ import (
 
 const (
 	// TagKey 字段标签中的键名
-	TagKey = "quiz"
-	VHide  = "hide"
-	VCheck = "check"
-	VHead  = "head"
-	IFlag  = "${i}"
-	KFlag  = "${k}"
+	TagKey = "quiz"  //标签名称
+	VHide  = "hide"  //表示不对标记的字段生成EntryQuiz
+	VCheck = "check" // 表示需要进行测试的内容，生成的EntryQuiz中的IsTest将为true
+	VHead  = "head"  // 表示舍弃字段值的内容，只取标签内容
+	IFlag  = "${i}"  //数组获取切片中的迭代索引定位符，仅支持一维数组。
+	KFlag  = "${k}"  //映射结构中键的定位符
 )
 
 type EntryQuiz struct {

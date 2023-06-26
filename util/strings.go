@@ -2,7 +2,9 @@ package util
 
 import (
 	"regexp"
+	"strconv"
 	"strings"
+	"unicode"
 )
 
 const (
@@ -40,4 +42,26 @@ func Expand(s string, m map[string]string) string {
 		s = strings.ReplaceAll(s, "${"+k+"}", v)
 	}
 	return s
+}
+
+func ChineseCount(str1 string) (count int) {
+	for _, char := range str1 {
+		if unicode.Is(unicode.Han, char) {
+			count++
+		}
+	}
+	return
+}
+
+func ChineseAlignNum(str1 string, num int) int {
+	count := ChineseCount(str1)
+	if count > num {
+		return num
+	}
+	return num - count
+}
+
+func ChineseAlignPattern(str1 string, num int) string {
+	alignNum := ChineseAlignNum(str1, num)
+	return "\n%" + strconv.Itoa(alignNum) + "s"
 }

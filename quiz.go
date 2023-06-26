@@ -17,7 +17,7 @@ const (
 		Prefix + "统计本次得分请输入S\n" +
 		Prefix + "退出当前程序请输入Q\n" +
 		Prefix + "跳过当前问答请输入K\n" +
-		Prefix + "跳至下一题组请输入KK\n"
+		Prefix + "跳至下一题组请输入KK"
 	GoodBye = Prefix + "就这样算了???不要怂啊!\n" +
 		Prefix + "期待下次更好的你!"
 )
@@ -39,13 +39,15 @@ var (
 		"我不信你还能过关,再来!",
 		"你这正确率,放在过去那就是状元!",
 	}
-	Prt = util.NewPrinter("", "%s>|  %s")
+	Prt = util.NewPrinter("", "%s  %s")
 )
 
 func showWith(doc *TextBlock) {
 	engine := quiz.NewTextEngine(doc)
 	engine.RegisterGuardFilter(showWelcome)
+	engine.RegisterGuardFilter(showWrongEntrise)
 	engine.RegisterEntryFilter(showSpendedTime)
+	engine.RegisterEntryFilter(setWrongEntrise)
 	engine.RegisterCoreFilter(setPath)
 	engine.RegisterOrder("K", skip)
 	engine.RegisterOrder("KK", skip1)
@@ -115,7 +117,7 @@ func showSpendedTime(e *quiz.TextEngine) error {
 		Prt.Printf("本次作答用时:%d秒\n", int(time.Since(start).Seconds()))
 		delete(e.UserCache, timeKey)
 		return nil
-	case e.HasLocate() || e.HasSkip():
+	case e.HasSkip():
 		delete(e.UserCache, timeKey)
 		return nil
 	default:
@@ -161,5 +163,45 @@ func setPath(e *quiz.TextEngine) error {
 	path = append(path, text.tittle)
 	e.UserCache[pathKey] = path
 	Prt.Prefix = strings.Join(path, "> ")
+	return nil
+}
+
+func setWrongEntrise(e *quiz.TextEngine) error {
+	if err := e.CheckEntry(); err != nil {
+		return err
+	}
+	if e.Right || e.HasSkip() {
+		return nil
+	}
+	key := "wrongentrise"
+	wrongEntrise := util.Load[map[*quiz.EntryQuiz]string](e.UserCache, key)
+	if wrongEntrise == nil {
+		wrongEntrise = map[*quiz.EntryQuiz]string{}
+	}
+	wrongEntrise[e.CurrentEntry()] = Prt.Prefix
+	e.UserCache[key] = wrongEntrise
+	return nil
+}
+
+func showWrongEntrise(e *quiz.TextEngine) error {
+	if err := e.Start(); err != nil {
+		return err
+	}
+	fmt.Println(Prefix + "下面进入纠错模式")
+	key := "wrongentrise"
+	wrongEntrise := util.Load[map[*quiz.EntryQuiz]string](e.UserCache, key)
+	if wrongEntrise == nil {
+		return nil
+	}
+	entrise := util.Keys[*quiz.EntryQuiz](wrongEntrise)
+	e.SetQuizEntrys(entrise)
+	//在展示单个词条前设置打印前缀
+	setPrefix := func(e *quiz.TextEngine) error {
+		entry := e.CurrentEntry()
+		Prt.Prefix = wrongEntrise[entry]
+		return e.CheckEntry()
+	}
+	e.RegisterEntryFilter(setPrefix)
+	e.ShowQuizEntrys()
 	return nil
 }
