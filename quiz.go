@@ -1,11 +1,13 @@
 package main
 
 import (
+	"bufio"
 	"example.com/bryce/quiz"
 	"example.com/bryce/util"
 	"fmt"
 	"log"
 	"math/rand"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -18,8 +20,9 @@ const (
 		Prefix + "退出当前程序请输入Q\n" +
 		Prefix + "跳过当前问答请输入K\n" +
 		Prefix + "跳至下一题组请输入KK"
-	GoodBye = Prefix + "就这样算了???不要怂啊!\n" +
-		Prefix + "期待下次更好的你!"
+	GoodBye = Prefix + "感谢你的使用！\n" +
+		Prefix + "期待下次更好的你！\n" +
+		Prefix + "祝你生活愉快！"
 )
 
 var (
@@ -39,7 +42,7 @@ var (
 		"我不信你还能过关,再来!",
 		"你这正确率,放在过去那就是状元!",
 	}
-	Prt = util.NewPrinter("", "%s  %s")
+	Prt = util.NewPrinter("", "%s>| %s")
 )
 
 func showWith(doc *TextBlock) {
@@ -81,12 +84,16 @@ func skip(e *quiz.TextEngine) (err error) {
 	}
 	e.SetSkipN(n)
 	entry := e.CurrentEntry()
-	Prt.Printf("%s %s\n", entry.Tittle, entry.Content)
+	Prt.Printf("%s %s", entry.Tittle, entry.Content)
+	bufio.NewReader(os.Stdin).ReadString('\n')
 	return
 }
 
 func skip1(e *quiz.TextEngine) error {
-	e.LocateToNextText()
+	if !e.LocateToNextText() {
+		Prt.Println("此位置不支持进行此跳转!!")
+	}
+	fmt.Println()
 	return nil
 }
 
@@ -94,6 +101,7 @@ func skip2(e *quiz.TextEngine) error {
 	if !e.LocateToNextSection() {
 		Prt.Println("此位置不支持进行此跳转!!")
 	}
+	fmt.Println()
 	return nil
 }
 
@@ -154,13 +162,13 @@ func setPath(e *quiz.TextEngine) error {
 	if p != nil {
 		path = p.([]string)
 		for i, s := range path {
-			if s == text.prev.tittle {
+			if s == text.prev.Tittle {
 				path = path[:i+1]
 				break
 			}
 		}
 	}
-	path = append(path, text.tittle)
+	path = append(path, text.Tittle)
 	e.UserCache[pathKey] = path
 	Prt.Prefix = strings.Join(path, "> ")
 	return nil
@@ -186,6 +194,9 @@ func setWrongEntrise(e *quiz.TextEngine) error {
 func showWrongEntrise(e *quiz.TextEngine) error {
 	if err := e.Start(); err != nil {
 		return err
+	}
+	if e.HasSkip() {
+		return nil
 	}
 	fmt.Println(Prefix + "下面进入纠错模式")
 	key := "wrongentrise"

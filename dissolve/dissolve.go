@@ -18,7 +18,7 @@ var FillTree func(tree Tree, cube *TextCube) Tree
 var IndentReg *regexp.Regexp
 
 type Tree interface {
-	Tittle() string
+	GetTittle() string
 	SetTittle(string)
 	Content() string
 	SetContent(string)

@@ -46,14 +46,14 @@ func fillTextBlock(tree dissolve.Tree, cube *dissolve.TextCube) dissolve.Tree {
 	textBlock := tree.(*TextBlock)
 	switch {
 	case strings.Contains(indent, BoldDelim):
-		textBlock.tittle = strings.TrimSuffix(tittle, BoldDelim)
-		textBlock.statement = content
+		textBlock.Tittle = strings.TrimSuffix(tittle, BoldDelim)
+		textBlock.Statement = content
 		return textBlock
 
 	case strings.Contains(tittle, KeyDelim):
 		tittle = strings.Trim(tittle, KeyDelim)
 		prev := textBlock.prev
-		prev.attention = append(prev.attention, tittle)
+		prev.Attention = append(prev.Attention, tittle)
 		prev.removeTree(textBlock)
 		return prev
 
@@ -61,15 +61,15 @@ func fillTextBlock(tree dissolve.Tree, cube *dissolve.TextCube) dissolve.Tree {
 		entry := strings.Split(tittle, TagDelim)
 		q := &Question{entry[0], entry[1], content}
 		prev := textBlock.prev
-		prev.questions = append(prev.questions, q)
+		prev.Questions = append(prev.Questions, q)
 		prev.removeTree(textBlock)
 		return prev
 	}
-	textBlock.tittle = tittle
-	textBlock.statement = content
+	textBlock.Tittle = tittle
+	textBlock.Statement = content
 	if strings.HasPrefix(content, CodeDelim) {
-		textBlock.code = strings.Trim(content, CodeDelim)
-		textBlock.statement = ""
+		textBlock.Code = strings.Trim(content, CodeDelim)
+		textBlock.Statement = ""
 	}
 	return textBlock
 }

@@ -6,19 +6,19 @@ import (
 )
 
 type TextBlock struct {
-	tittle    string      `quiz:"hide |下面进入<${tittle}>部分"` // head用于表示只展示标签定义的内容
-	code      string      `quiz:"show |代码:"`
-	attention []string    `quiz:"check|<${tittle}>第${i}个口诀:"`
-	statement string      `quiz:"show |内容"`
-	questions []*Question `quiz:"show |第${i}个问题"`
+	Tittle    string      `json:"Tittle" quiz:"head |下面进入<${Tittle}>部分"` // head用于表示只展示标签定义的内容
+	Code      string      `json:"Code" quiz:"show"`
+	Attention []string    `json:"Attention" quiz:"check|<${Tittle}>第${i}个口诀:"`
+	Statement string      `json:"Statement" quiz:"show |内容"`
+	Questions []*Question `json:"Questions" quiz:"show |那么第${i}个问题"`
 	prev      *TextBlock
 	subBlocks []*TextBlock
 }
 
 type Question struct {
-	topic       string
-	answer      string `quiz:"check  |\"${topic}\"的答案是:"`
-	explanation string `quiz:"show"`
+	Topic       string
+	Answer      string `quiz:"check  |\"${Topic}\"的答案是:"`
+	Explanation string `quiz:"show"`
 }
 
 func (t *TextBlock) Prev() quiz.QText {
@@ -33,20 +33,20 @@ func (t *TextBlock) Subs() []quiz.QText {
 	return qts
 }
 
-func (t *TextBlock) Tittle() string {
-	return t.tittle
+func (t *TextBlock) GetTittle() string {
+	return t.Tittle
 }
 
 func (t *TextBlock) SetTittle(s string) {
-	t.tittle = s
+	t.Tittle = s
 }
 
 func (t *TextBlock) Content() string {
-	return t.statement
+	return t.Statement
 }
 
 func (t *TextBlock) SetContent(s string) {
-	t.statement = s
+	t.Statement = s
 }
 
 func (t *TextBlock) NewTree() dissolve.Tree {
