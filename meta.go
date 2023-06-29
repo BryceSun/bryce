@@ -17,7 +17,7 @@ type TextBlock struct {
 
 type Question struct {
 	Topic       string
-	Answer      string `quiz:"check  |\"${Topic}\"的答案是:"`
+	Answer      string `quiz:"check  |\"${Topic}\"的答案是："`
 	Explanation string `quiz:"show"`
 }
 

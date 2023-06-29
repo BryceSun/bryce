@@ -33,11 +33,23 @@ func InitDB() (err error) {
 
 func storeWithDB(tb *TextBlock) (err error) {
 	err = InitDB()
-	noteName = tb.Tittle
 	if err != nil {
 		return err
 	}
+	noteName = tb.Tittle
+	_, err = deleteFromDB(noteName)
+	if err != nil {
+		log.Panicln(err)
+	}
 	return storeAll(tb, -1)
+}
+
+func deleteFromDB(tittle string) (int64, error) {
+	result, err := db.Exec("delete from notebook where note_name = ?", tittle)
+	if err != nil {
+		log.Panicln(err)
+	}
+	return result.RowsAffected()
 }
 
 func LoadFromDB(tittle string) (tb *TextBlock, err error) {

@@ -43,6 +43,9 @@ func scan(s string) (*TextBlock, error) {
 
 func fillTextBlock(tree dissolve.Tree, cube *dissolve.TextCube) dissolve.Tree {
 	indent, tittle, content := cube.Indent, cube.Tittle, cube.Content
+	if strings.TrimSpace(content) == "-" {
+		content = ""
+	}
 	textBlock := tree.(*TextBlock)
 	switch {
 	case strings.Contains(indent, BoldDelim):
@@ -50,7 +53,7 @@ func fillTextBlock(tree dissolve.Tree, cube *dissolve.TextCube) dissolve.Tree {
 		textBlock.Statement = content
 		return textBlock
 
-	case strings.Contains(tittle, KeyDelim):
+	case strings.HasPrefix(indent, KeyDelim):
 		tittle = strings.Trim(tittle, KeyDelim)
 		prev := textBlock.prev
 		prev.Attention = append(prev.Attention, tittle)
@@ -59,7 +62,11 @@ func fillTextBlock(tree dissolve.Tree, cube *dissolve.TextCube) dissolve.Tree {
 
 	case strings.Contains(tittle, TagDelim):
 		entry := strings.Split(tittle, TagDelim)
-		q := &Question{entry[0], entry[1], content}
+		q := &Question{
+			Topic:       strings.TrimSpace(entry[0]),
+			Answer:      strings.TrimSpace(entry[1]),
+			Explanation: strings.TrimSpace(content),
+		}
 		prev := textBlock.prev
 		prev.Questions = append(prev.Questions, q)
 		prev.removeTree(textBlock)

@@ -5,6 +5,7 @@ import (
 	"example.com/bryce/quiz"
 	"example.com/bryce/util"
 	"fmt"
+	"io"
 	"log"
 	"math/rand"
 	"os"
@@ -14,7 +15,7 @@ import (
 )
 
 const (
-	Prefix  = "                 "
+	Prefix  = "                                                     "
 	Welcome = Prefix + "欢迎使用子匀问答!\n" +
 		Prefix + "统计本次得分请输入S\n" +
 		Prefix + "退出当前程序请输入Q\n" +
@@ -46,9 +47,11 @@ var (
 )
 
 func showWith(doc *TextBlock) {
+	log.SetOutput(io.Discard)
 	engine := quiz.NewTextEngine(doc)
 	engine.RegisterGuardFilter(showWelcome)
 	engine.RegisterGuardFilter(showWrongEntrise)
+	engine.RegisterEntryFilter(printEmptyLine)
 	engine.RegisterEntryFilter(showSpendedTime)
 	engine.RegisterEntryFilter(setWrongEntrise)
 	engine.RegisterCoreFilter(setPath)
@@ -66,10 +69,12 @@ func showWith(doc *TextBlock) {
 }
 func showWelcome(e *quiz.TextEngine) error {
 	fmt.Println(Welcome)
+	fmt.Println()
 	if err := e.Start(); err != nil {
 		log.Println(err)
 		return err
 	}
+	fmt.Println()
 	fmt.Println(GoodBye)
 	return nil
 }
@@ -84,7 +89,7 @@ func skip(e *quiz.TextEngine) (err error) {
 	}
 	e.SetSkipN(n)
 	entry := e.CurrentEntry()
-	Prt.Printf("%s %s", entry.Tittle, entry.Content)
+	Prt.Printf("%s%s", entry.Tittle, entry.Content)
 	bufio.NewReader(os.Stdin).ReadString('\n')
 	return
 }
@@ -93,7 +98,6 @@ func skip1(e *quiz.TextEngine) error {
 	if !e.LocateToNextText() {
 		Prt.Println("此位置不支持进行此跳转!!")
 	}
-	fmt.Println()
 	return nil
 }
 
@@ -101,15 +105,22 @@ func skip2(e *quiz.TextEngine) error {
 	if !e.LocateToNextSection() {
 		Prt.Println("此位置不支持进行此跳转!!")
 	}
-	fmt.Println()
 	return nil
 }
 
 func skipToHead(e *quiz.TextEngine) error {
 	e.LocateTo(e.HeadText)
+	fmt.Println()
 	return nil
 }
 
+func printEmptyLine(e *quiz.TextEngine) error {
+	if err := e.CheckEntry(); err != nil {
+		return err
+	}
+	fmt.Println()
+	return nil
+}
 func showSpendedTime(e *quiz.TextEngine) error {
 	start := time.Now()
 	timeKey := "startTime"
@@ -170,7 +181,7 @@ func setPath(e *quiz.TextEngine) error {
 	}
 	path = append(path, text.Tittle)
 	e.UserCache[pathKey] = path
-	Prt.Prefix = strings.Join(path, "> ")
+	Prt.Prefix = Prefix + strings.Join(path, "> ")
 	return nil
 }
 
@@ -198,7 +209,7 @@ func showWrongEntrise(e *quiz.TextEngine) error {
 	if e.HasSkip() {
 		return nil
 	}
-	fmt.Println(Prefix + "下面进入纠错模式")
+	fmt.Println(Prefix + "	<下面进入纠错模式>")
 	key := "wrongentrise"
 	wrongEntrise := util.Load[map[*quiz.EntryQuiz]string](e.UserCache, key)
 	if wrongEntrise == nil {
@@ -214,5 +225,6 @@ func showWrongEntrise(e *quiz.TextEngine) error {
 	}
 	e.RegisterEntryFilter(setPrefix)
 	e.ShowQuizEntrys()
+	fmt.Println(Prefix + "	<纠错模式结束>")
 	return nil
 }
