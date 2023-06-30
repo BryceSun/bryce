@@ -18,24 +18,24 @@ type notebook struct {
 	content *TextBlock
 }
 
-func InitDB() (err error) {
+func InitDB() {
+	var err error
 	db, err = sql.Open("mysql", "root:123456@tcp(localhost:3306)/brycenote?timeout=30s")
 	if err != nil {
 		log.Print(err)
-		return err
 	}
 	db.SetConnMaxLifetime(10)
 	db.SetMaxIdleConns(10)
 	db.SetConnMaxIdleTime(time.Minute * 15)
 	db.SetMaxOpenConns(10)
-	return db.Ping()
+	err = db.Ping()
+	if err != nil {
+		log.Panicln(err)
+	}
 }
 
 func storeWithDB(tb *TextBlock) (err error) {
-	err = InitDB()
-	if err != nil {
-		return err
-	}
+	InitDB()
 	noteName = tb.Tittle
 	_, err = deleteFromDB(noteName)
 	if err != nil {
@@ -52,11 +52,23 @@ func deleteFromDB(tittle string) (int64, error) {
 	return result.RowsAffected()
 }
 
-func LoadFromDB(tittle string) (tb *TextBlock, err error) {
-	err = InitDB()
+func ListTextNames() []string {
+	InitDB()
+	rows, err := db.Query("select note_name from notebook where prev_id = -1")
 	if err != nil {
-		return nil, err
+		log.Panicln(err)
 	}
+	var names []string
+	var name string
+	for rows.Next() {
+		_ = rows.Scan(&name)
+		names = append(names, name)
+	}
+	return names
+}
+
+func LoadFromDB(tittle string) (tb *TextBlock, err error) {
+	InitDB()
 	row := db.QueryRow("select id,prev_id, content from notebook where note_name = ? and prev_id = -1 limit 1", tittle)
 	b := getNoteBook(row)
 	rows, err := db.Query("select id, prev_id, content from notebook where note_name = ? and prev_id  > -1 ", tittle)

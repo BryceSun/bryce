@@ -8,15 +8,19 @@ import (
 )
 
 const (
-	Ext             = ".md"
-	CodeDelim       = "```"
-	TagDelim        = "--"
-	BoldDelim       = "**"
-	KeyDelim        = "=="
-	HeaderPrefixExp = ` *[-#*]+ (\*\*)?`
+	Ext               = ".md"
+	CodeDelim         = "```"
+	TagDelim          = "--"
+	BoldDelim         = "**"
+	KeyDelim          = "=="
+	HeaderPrefixExp   = `#+ `
+	ListBoldPrefixExp = ` *- +\*\*`
+	ListPrefixExp     = ` *- +`
 )
 
 var HeaderPrefixReg = regexp.MustCompile(HeaderPrefixExp)
+var BoldPrefixReg = regexp.MustCompile(ListBoldPrefixExp)
+var ListPrefixReg = regexp.MustCompile(ListPrefixExp)
 
 // 根据文件路径名扫描文档
 // 基于树形分析将词条和内容分拣后再以自定义处理器分别处理两者
@@ -25,9 +29,13 @@ func scanPlus(s string) error {
 		log.Panic("必须是md文件")
 	}
 	t := new(TextBlock)
-	dissolve.IndentReg = HeaderPrefixReg
-	dissolve.FillTree = fillTextBlock
-	return dissolve.ParseFile(s, t)
+	dissolve.IndentRegs = []*regexp.Regexp{HeaderPrefixReg, BoldPrefixReg, ListPrefixReg}
+	err := dissolve.ParseFile(s, t)
+	if err != nil {
+		return err
+	}
+	fixTextBlock(t)
+	return nil
 }
 
 func scan(s string) (*TextBlock, error) {
@@ -35,31 +43,38 @@ func scan(s string) (*TextBlock, error) {
 		log.Panic("必须是md文件")
 	}
 	t := new(TextBlock)
-	dissolve.IndentReg = HeaderPrefixReg
-	dissolve.FillTree = fillTextBlock
+	dissolve.IndentRegs = []*regexp.Regexp{HeaderPrefixReg, BoldPrefixReg, ListPrefixReg}
 	err := dissolve.ParseFile(s, t)
+	if err != nil {
+		return nil, err
+	}
+	handleTextBlock(t)
 	return t, err
 }
 
-func fillTextBlock(tree dissolve.Tree, cube *dissolve.TextCube) dissolve.Tree {
-	indent, tittle, content := cube.Indent, cube.Tittle, cube.Content
-	if strings.TrimSpace(content) == "-" {
+func handleTextBlock(block *TextBlock) {
+	var blocks []*TextBlock
+	blocks = append(blocks, block.subBlocks...)
+	for _, b := range blocks {
+		handleTextBlock(b)
+	}
+	fixTextBlock(block)
+}
+
+func fixTextBlock(block *TextBlock) {
+	tittle, content := block.Tittle, block.Statement
+	if content == "-" {
 		content = ""
 	}
-	textBlock := tree.(*TextBlock)
 	switch {
-	case strings.Contains(indent, BoldDelim):
-		textBlock.Tittle = strings.TrimSuffix(tittle, BoldDelim)
-		textBlock.Statement = content
-		return textBlock
-
-	case strings.HasPrefix(indent, KeyDelim):
+	case strings.HasSuffix(tittle, BoldDelim):
+		block.Tittle = strings.TrimSuffix(tittle, BoldDelim)
+		block.Statement = content
+	case strings.HasPrefix(tittle, KeyDelim):
 		tittle = strings.Trim(tittle, KeyDelim)
-		prev := textBlock.prev
+		prev := block.prev
 		prev.Attention = append(prev.Attention, tittle)
-		prev.removeTree(textBlock)
-		return prev
-
+		prev.removeTree(block)
 	case strings.Contains(tittle, TagDelim):
 		entry := strings.Split(tittle, TagDelim)
 		q := &Question{
@@ -67,16 +82,12 @@ func fillTextBlock(tree dissolve.Tree, cube *dissolve.TextCube) dissolve.Tree {
 			Answer:      strings.TrimSpace(entry[1]),
 			Explanation: strings.TrimSpace(content),
 		}
-		prev := textBlock.prev
+		prev := block.prev
 		prev.Questions = append(prev.Questions, q)
-		prev.removeTree(textBlock)
-		return prev
+		prev.removeTree(block)
 	}
-	textBlock.Tittle = tittle
-	textBlock.Statement = content
 	if strings.HasPrefix(content, CodeDelim) {
-		textBlock.Code = strings.Trim(content, CodeDelim)
-		textBlock.Statement = ""
+		block.Code = strings.Trim(content, CodeDelim)
+		block.Statement = ""
 	}
-	return textBlock
 }

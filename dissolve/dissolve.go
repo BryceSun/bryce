@@ -11,27 +11,24 @@ import (
 	"strings"
 )
 
-const IndentLinePattern = `\n?^?(?P<%s>%s).*`
+const IndentLinePattern = `(?:^|\n)(?P<%s>%s).*`
 
 var Logger = log.Default()
-var FillTree func(tree Tree, cube *TextCube) Tree
-var IndentReg *regexp.Regexp
+var IndentRegs []*regexp.Regexp
 
 type Tree interface {
-	GetTittle() string
 	SetTittle(string)
-	Content() string
 	SetContent(string)
 	NewTree() Tree
 }
 
-type TextCube struct {
+type textCube struct {
 	Indent  string
 	Tittle  string
 	Content string
 }
 
-func (c TextCube) fixTittle() {
+func (c textCube) fixTittle() {
 	c.Tittle = strings.TrimPrefix(c.Tittle, c.Indent)
 }
 
@@ -65,12 +62,20 @@ func SParse(text string, t Tree) error {
 }
 
 func transfer(text string, t Tree) error {
-	textCubes := SplitText(text)
+	content, textCubes := SplitText(text)
+	if len(textCubes) == 0 {
+		t.SetContent(content)
+		return nil
+	}
+	err := transfer(content, t)
+	if err != nil {
+		return err
+	}
 	for _, cube := range textCubes {
 		subt := t.NewTree()
-		text := fixTextCube(cube)
-		subt = FillTree(subt, cube)
-		err := transfer(text, subt)
+		fixTextCube(cube)
+		subt.SetTittle(cube.Tittle)
+		err := transfer(cube.Content, subt)
 		if err != nil {
 			return err
 		}
@@ -78,40 +83,32 @@ func transfer(text string, t Tree) error {
 	return nil
 }
 
-func fixTextCube(cube *TextCube) string {
+func fixTextCube(cube *textCube) {
 	text, tittle := cube.Content, cube.Tittle
 	cube.Tittle = strings.TrimPrefix(tittle, cube.Indent)
 	Logger.Println("获取词条：", cube.Tittle)
 	//没有下一行则返回
 	lineEndIndex := strings.IndexAny(text, "\n\r")
-	if lineEndIndex == -1 {
-		cube.Content = ""
-		return ""
+	cube.Content = ""
+	if lineEndIndex != -1 {
+		cube.Content = text[lineEndIndex+1:]
 	}
-	text = text[lineEndIndex+1:]
-	//判断是否有子词条
-	if !IndentReg.MatchString(text) {
-		cube.Content = text
-		return ""
-	}
-	//获取子词条的索引
-	sonIndentIndex := IndentReg.FindStringIndex(text)
-	//取索引前的数据内容
-	cube.Content = text[:sonIndentIndex[0]]
-	text = strings.TrimLeft(text[sonIndentIndex[0]:], "\n\r")
-	return text
 }
 
-func SplitText(text string) (subs []*TextCube) {
-	Logger.Println("初始正则表达式：", IndentReg)
-	if len(text) == 0 {
-		return
+func SplitText(text string) (content string, subs []*textCube) {
+	var indentReg *regexp.Regexp
+	for _, reg := range IndentRegs {
+		if reg.MatchString(text) {
+			indentReg = reg
+			break
+		}
 	}
-	if !IndentReg.MatchString(text) {
-		Logger.Panicln("文本不能被初始缩进正则表达式匹配")
-		return
+	if indentReg == nil {
+		Logger.Println("文本不能被所有缩进正则表达式匹配")
+		return text, subs
 	}
-	firstindent := IndentReg.FindString(text)
+	Logger.Println("使用正则表达式：", indentReg)
+	firstindent := indentReg.FindString(text)
 	patternName := "Indent"
 	tittleLineReg := indentLineReg(firstindent, patternName)
 	if !tittleLineReg.MatchString(text) {
@@ -122,8 +119,9 @@ func SplitText(text string) (subs []*TextCube) {
 	indentIndex := tittleLineReg.SubexpIndex(patternName) * 2
 
 	l := len(indexes)
-	subs = make([]*TextCube, len(indexes))
+	subs = make([]*textCube, len(indexes))
 	start, end := indexes[0][indentIndex], -1
+	content = text[:start]
 	for i := 0; i < l; i++ {
 		//获取词条最大范围的文本
 		j := i + 1
@@ -134,7 +132,7 @@ func SplitText(text string) (subs []*TextCube) {
 			end = indexes[j][indentIndex]
 			subText = text[start:end]
 		}
-		t := new(TextCube)
+		t := new(textCube)
 		subs[i] = t
 		t.Content = strings.Trim(subText, "\n\r")
 		start = end

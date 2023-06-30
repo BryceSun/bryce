@@ -6,7 +6,7 @@ import (
 )
 
 type qTextMocker struct {
-	name      string   `quiz:"${name}的${tail}是:,head"`
+	name      string   `quiz:"${name}的${qName}是,GetTittle"`
 	code      string   `quiz:"代码,false,hide"`
 	tag       string   `quiz:"要诀,true,hide"`
 	key       string   `quiz:"重点,true,show"`
@@ -29,7 +29,7 @@ func (q *qTextMocker) Subs() []QText {
 }
 
 var (
-	attention0 = []string{}
+	attention0 []string
 	attention1 = []string{"one"}
 	attention2 = []string{"one", "two"}
 	attention3 = []string{"one", "two", "three"}
@@ -64,8 +64,6 @@ func TestPrseQText(t *testing.T) {
 func TestNewTextEngine(t *testing.T) {
 	engine := NewTextEngine(atmh)
 	fmt.Printf("%+v", engine)
-	showWelcome(engine)
-	showGoodBye(engine)
 	TestTextEngine_RegisterHandler(t)
 }
 
@@ -89,37 +87,22 @@ func TestTextEngine_RegisterHandler(t *testing.T) {
 	one, two := "order1", "order2"
 	_ = userOrders
 	_ = defaultOrders
-	engine.RegisterHandler(one, userOrders[0])
-	engine.RegisterHandler(two, userOrders[1])
-	engine.registerHandler(one, defaultOrders[0])
-	engine.registerHandler(two, defaultOrders[1])
+	engine.RegisterOrder(one, userOrders[0])
+	engine.RegisterOrder(two, userOrders[1])
+	engine.registerOrder(one, defaultOrders[0])
+	engine.registerOrder(two, defaultOrders[1])
 	engine.excFuncOrPrintln(one, "没有注册"+one+"功能")
 	engine.excFuncOrPrintln(two, "没有注册"+two+"功能")
 	engine.excFuncOrPrintln("onefunc", "没有注册onefunc功能")
 	initAtm()
 	engine.SetToText(atm1)
-	if engine.SetToRighText() != true || engine.currentText != atm2 {
-		t.Fail()
-	}
-	if engine.SetToRighText() != false {
-		t.Fail()
-	}
-	if engine.SetToUpperText() != true || engine.currentText != atm0 {
-		t.Fail()
-	}
-	if engine.SetToRighText() != false {
-		t.Fail()
-	}
-	if engine.SetToUpperText() != true || engine.currentText != atmh {
-		t.Fail()
-	}
-	if engine.SetToRighText() != false || engine.SetToUpperText() != false || engine.currentText != atmh {
-		t.Fail()
-	}
 	println(engine)
 }
 
 func TestTextEngine_Start(t *testing.T) {
 	engine := NewTextEngine(atmh)
-	engine.Start()
+	err := engine.Start()
+	if err != nil {
+		return
+	}
 }

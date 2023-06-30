@@ -209,13 +209,16 @@ func showWrongEntrise(e *quiz.TextEngine) error {
 	if e.HasSkip() {
 		return nil
 	}
-	fmt.Println(Prefix + "	<下面进入纠错模式>")
 	key := "wrongentrise"
 	wrongEntrise := util.Load[map[*quiz.EntryQuiz]string](e.UserCache, key)
 	if wrongEntrise == nil {
 		return nil
 	}
 	entrise := util.Keys[*quiz.EntryQuiz](wrongEntrise)
+	if len(entrise) == 0 {
+		return nil
+	}
+	fmt.Println(Prefix + "	<下面进入纠错模式>")
 	e.SetQuizEntrys(entrise)
 	//在展示单个词条前设置打印前缀
 	setPrefix := func(e *quiz.TextEngine) error {

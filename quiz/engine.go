@@ -1,10 +1,9 @@
 package quiz
 
 import (
-	"bufio"
+	"example.com/bryce/util"
 	"fmt"
 	"log"
-	"os"
 	"reflect"
 	"strings"
 )
@@ -216,7 +215,11 @@ func checkEntry(tc *TextEngine) (err error) {
 	tc.input = tc.input[:0]
 	for len(tc.input) == 0 {
 		tc.excFuncOrPrintln(TittleFunKey, entry.Tittle)
-		tc.getUserInput()
+		in := util.Scanln()
+		if in != "" {
+			tc.input = append(tc.input, in)
+			tc.input = append(tc.input, strings.Split(in, " ")...)
+		}
 	}
 	if tc.input[0] == entry.Content {
 		tc.Right = true
@@ -232,19 +235,6 @@ func checkEntry(tc *TextEngine) (err error) {
 		log.Println(err)
 	}
 	return
-}
-
-func (tc *TextEngine) getUserInput() {
-	in, err := bufio.NewReader(os.Stdin).ReadString('\n')
-	if err != nil {
-		log.Println(err)
-	}
-	in = strings.TrimSpace(in)
-	if in == "" {
-		return
-	}
-	tc.input = append(tc.input, in)
-	tc.input = append(tc.input, strings.Split(in, " ")...)
 }
 
 func (tc *TextEngine) getHandler(s string) Handler {

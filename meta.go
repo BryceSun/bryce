@@ -33,16 +33,8 @@ func (t *TextBlock) Subs() []quiz.QText {
 	return qts
 }
 
-func (t *TextBlock) GetTittle() string {
-	return t.Tittle
-}
-
 func (t *TextBlock) SetTittle(s string) {
 	t.Tittle = s
-}
-
-func (t *TextBlock) Content() string {
-	return t.Statement
 }
 
 func (t *TextBlock) SetContent(s string) {
