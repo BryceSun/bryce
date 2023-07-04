@@ -3,22 +3,18 @@ package main
 import (
 	"example.com/bryce/dissolve"
 	"example.com/bryce/quiz"
+	"strings"
 )
 
 type TextBlock struct {
-	Tittle    string      `json:"Tittle" quiz:"head |下面进入<${Tittle}>部分"` // head用于表示只展示标签定义的内容
-	Code      string      `json:"Code" quiz:"show"`
-	Attention []string    `json:"Attention" quiz:"check|<${Tittle}>第${i}个口诀:"`
-	Statement string      `json:"Statement" quiz:"show |内容"`
-	Questions []*Question `json:"Questions" quiz:"show |那么第${i}个问题"`
+	Tittle    string `json:"Tittle" quiz:"head |下面进入<${Tittle}>部分"` // head用于表示只展示标签定义的内容
+	Attention string `json:"Attention" quiz:"confirm"`
+	Mnemonic  string `json:"Mnemonic" quiz:"check|请输入口诀:"`
+	Statement string `json:"Statement" quiz:"show"`
+	Question  string `json:"Question"`
+	Answer    string `json:"Answer" quiz:"check |\"${Question}\"的答案是:"`
 	prev      *TextBlock
 	subBlocks []*TextBlock
-}
-
-type Question struct {
-	Topic       string
-	Answer      string `quiz:"check  |\"${Topic}\"的答案是："`
-	Explanation string `quiz:"show"`
 }
 
 func (t *TextBlock) Prev() quiz.QText {
@@ -38,10 +34,18 @@ func (t *TextBlock) SetTittle(s string) {
 }
 
 func (t *TextBlock) SetContent(s string) {
-	t.Statement = s
+	if strings.TrimSpace(s) == "" {
+		return
+	}
+	tree := t.subTree()
+	tree.Statement = s
 }
 
 func (t *TextBlock) NewTree() dissolve.Tree {
+	return t.subTree()
+}
+
+func (t *TextBlock) subTree() *TextBlock {
 	n := new(TextBlock)
 	n.prev = t
 	t.subBlocks = append(t.subBlocks, n)

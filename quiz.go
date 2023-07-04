@@ -8,7 +8,6 @@ import (
 	"io"
 	"log"
 	"math/rand"
-	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -51,17 +50,18 @@ func showWith(doc *TextBlock) {
 	engine := quiz.NewTextEngine(doc)
 	engine.RegisterGuardFilter(showWelcome)
 	engine.RegisterGuardFilter(showWrongEntrise)
-	engine.RegisterEntryFilter(printEmptyLine)
 	engine.RegisterEntryFilter(showSpendedTime)
 	engine.RegisterEntryFilter(setWrongEntrise)
+	engine.RegisterEntryFilter(printEmptyLine)
 	engine.RegisterCoreFilter(setPath)
 	engine.RegisterOrder("K", skip)
-	engine.RegisterOrder("KK", skip1)
-	engine.RegisterOrder("KKK", skip2)
+	engine.RegisterOrder("KK", skip2)
+	//engine.RegisterOrder("KKK", skip2)
 	engine.RegisterOrder("Q", skipToHead)
 	engine.RegisterOrder(quiz.EncourageFunKey, encourage)
 	engine.RegisterOrder(quiz.PraiseFunKey, praise)
 	engine.RegisterOrder(quiz.TittleFunKey, printTittle)
+	engine.RegisterOrder(quiz.StateFunKey, printStatement)
 	err := engine.Start()
 	if err != nil {
 		log.Println(err)
@@ -90,15 +90,8 @@ func skip(e *quiz.TextEngine) (err error) {
 	e.SetSkipN(n)
 	entry := e.CurrentEntry()
 	Prt.Printf("%s%s", entry.Tittle, entry.Content)
-	bufio.NewReader(os.Stdin).ReadString('\n')
+	util.Scanln()
 	return
-}
-
-func skip1(e *quiz.TextEngine) error {
-	if !e.LocateToNextText() {
-		Prt.Println("此位置不支持进行此跳转!!")
-	}
-	return nil
 }
 
 func skip2(e *quiz.TextEngine) error {
@@ -157,7 +150,7 @@ func praise(e *quiz.TextEngine) error {
 
 func printTittle(e *quiz.TextEngine) error {
 	entry := e.CurrentEntry()
-	if entry.IsTest {
+	if entry.Kind == quiz.Test {
 		Prt.Print(entry.Tittle)
 		return nil
 	}
@@ -165,8 +158,24 @@ func printTittle(e *quiz.TextEngine) error {
 	return nil
 }
 
+func printStatement(e *quiz.TextEngine) (err error) {
+	content := e.CurrentEntry().Content
+	reader := bufio.NewReader(strings.NewReader(content))
+	for err == nil {
+		readString, e := reader.ReadString('\n')
+		err = e
+		fmt.Print(Prefix + readString)
+	}
+	fmt.Println()
+	log.Println(e)
+	return nil
+}
+
 func setPath(e *quiz.TextEngine) error {
 	text := e.CurrentText.(*TextBlock)
+	if text.Tittle == "" {
+		return nil
+	}
 	pathKey := "tittles"
 	var path []string
 	p := e.UserCache[pathKey]

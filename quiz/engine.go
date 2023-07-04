@@ -71,7 +71,7 @@ func NewTextEngine(qt QText) *TextEngine {
 
 func parseAndTest(tc *TextEngine) (err error) {
 	tc.cIndex = 0
-	err = tc.throughFilters(setQuizEntrys, &tc.cHandlers, &tc.cIndex)(tc)
+	err = tc.ParseAndSetEntrys()
 	if err != nil {
 		return err
 	}
@@ -118,8 +118,13 @@ func (tc *TextEngine) throughFilters(f Handler, filters *[]Handler, i *int) (h H
 	return h
 }
 
+// ParseAndSetEntrys 设置题集
+func (tc *TextEngine) ParseAndSetEntrys() error {
+	return tc.throughFilters(parseText, &tc.cHandlers, &tc.cIndex)(tc)
+}
+
 // 设置题集
-func setQuizEntrys(tc *TextEngine) error {
+func parseText(tc *TextEngine) error {
 	tc.quizEntrys = parseQText(tc.CurrentText)
 	return nil
 }
@@ -130,29 +135,16 @@ func (tc *TextEngine) LocateTo(text QText) {
 	tc.locText = text
 }
 
-// LocateToNextText  重定位到下一小节
-func (tc *TextEngine) LocateToNextText() bool {
-	if tc.locText == nil {
-		tc.locText = tc.CurrentText
-	}
-	tc.setLocIndex()
-	if tc.locToRighText() {
-		return true
-	}
-	if tc.locToUpperText() && tc.locToRighText() {
-		return true
-	}
-	tc.locText = nil
-	return false
-}
-
 // LocateToNextSection 重定位到下一文本块
 func (tc *TextEngine) LocateToNextSection() bool {
 	if tc.locText == nil {
 		tc.locText = tc.CurrentText
 	}
 	tc.setLocIndex()
-	if tc.locToUpperText() && tc.locToRighText() {
+	if tc.locToUpperText() {
+		if !tc.locToRighText() {
+			return tc.LocateToNextSection()
+		}
 		return true
 	}
 	tc.locText = nil
@@ -182,10 +174,15 @@ func (tc *TextEngine) ShowQuizEntrys() {
 		}
 		tc.Right = false
 		//非测试题仅进行内容展示
-		if !entry.IsTest {
-			tc.excFuncOrPrintln(TittleFunKey, entry.Tittle)
+		if entry.Kind != Test {
+			if strings.TrimSpace(entry.Tittle) != "" {
+				tc.excFuncOrPrintln(TittleFunKey, entry.Tittle)
+			}
 			if strings.TrimSpace(entry.Content) != "" {
 				tc.excFuncOrPrintln(StateFunKey, entry.Content)
+			}
+			if entry.Kind == Confirm {
+				util.Scanln()
 			}
 			continue
 		}
@@ -315,6 +312,23 @@ func (tc *TextEngine) setLocIndex() {
 			return
 		}
 	}
+}
+
+// GetIndex 重定位或向父节点移动时需要调用此方法
+func (tc *TextEngine) GetIndex() int {
+	if tc.locText == nil {
+		tc.locText = tc.CurrentText
+	}
+	text := tc.locText
+	if reflect.ValueOf(text.Prev()).IsNil() {
+		return 0
+	}
+	for i, subText := range text.Prev().Subs() {
+		if subText == text {
+			return i
+		}
+	}
+	return 0
 }
 
 func (tc *TextEngine) HasSkip() bool {
