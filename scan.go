@@ -25,16 +25,10 @@ var ListPrefixReg = regexp.MustCompile(ListPrefixExp)
 // 根据文件路径名扫描文档
 // 基于树形分析将词条和内容分拣后再以自定义处理器分别处理两者
 func scanPlus(s string) error {
-	if !strings.HasSuffix(s, Ext) {
-		log.Panic("必须是md文件")
-	}
-	t := new(TextBlock)
-	dissolve.IndentRegs = []*regexp.Regexp{HeaderPrefixReg, BoldPrefixReg, ListPrefixReg}
-	err := dissolve.ParseFile(s, t)
+	_, err := scan(s)
 	if err != nil {
 		return err
 	}
-	fixTextBlock(t)
 	return nil
 }
 

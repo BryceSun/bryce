@@ -53,12 +53,12 @@ func load(s string) error {
 func list(string) error {
 	var input string
 	for input != "Q" {
-		names := ListTextNames()
-		for _, name := range names {
-			fmt.Println(name)
-		}
 		input = ""
 		for input == "" {
+			names := ListTextNames()
+			for _, name := range names {
+				fmt.Println(name)
+			}
 			fmt.Print("请选择：")
 			input = util.Scanln()
 		}
