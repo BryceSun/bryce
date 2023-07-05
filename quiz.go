@@ -50,13 +50,12 @@ func showWith(doc *TextBlock) {
 	engine := quiz.NewTextEngine(doc)
 	engine.RegisterGuardFilter(showWelcome)
 	engine.RegisterGuardFilter(showWrongEntrise)
+	engine.RegisterEntryFilter(printEmptyLine)
 	engine.RegisterEntryFilter(showSpendedTime)
 	engine.RegisterEntryFilter(setWrongEntrise)
-	engine.RegisterEntryFilter(printEmptyLine)
 	engine.RegisterCoreFilter(setPath)
 	engine.RegisterOrder("K", skip)
 	engine.RegisterOrder("KK", skip2)
-	//engine.RegisterOrder("KKK", skip2)
 	engine.RegisterOrder("Q", skipToHead)
 	engine.RegisterOrder(quiz.EncourageFunKey, encourage)
 	engine.RegisterOrder(quiz.PraiseFunKey, praise)
@@ -150,23 +149,28 @@ func praise(e *quiz.TextEngine) error {
 
 func printTittle(e *quiz.TextEngine) error {
 	entry := e.CurrentEntry()
-	if entry.Kind == quiz.Test {
-		Prt.Print(entry.Tittle)
-		return nil
-	}
-	Prt.Println(entry.Tittle)
+	//if entry.Kind == quiz.Test {
+	Prt.Print(entry.Tittle)
 	return nil
+	//}
+	//Prt.Println(entry.Tittle)
+	//return nil
 }
 
 func printStatement(e *quiz.TextEngine) (err error) {
 	content := e.CurrentEntry().Content
 	reader := bufio.NewReader(strings.NewReader(content))
+	readString := ""
 	for err == nil {
-		readString, e := reader.ReadString('\n')
-		err = e
+		readString, err = reader.ReadString('\n')
 		fmt.Print(Prefix + readString)
 	}
-	fmt.Println()
+	if e.CurrentEntry().Kind != quiz.Confirm {
+		fmt.Println()
+		fmt.Println()
+	} else {
+		fmt.Printf("\n%s", Prefix)
+	}
 	log.Println(e)
 	return nil
 }

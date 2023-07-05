@@ -82,14 +82,14 @@ func handleTittle(block *TextBlock) {
 
 func handleStatement(block *TextBlock) {
 	content := block.Statement
-	if strings.TrimSpace(content) == "" {
+	content = strings.TrimSpace(content)
+	if content == "" {
 		return
 	}
 	block.Statement = ""
 	if strings.HasPrefix(content, CodeDelim) {
+		content = strings.Trim(content, CodeDelim)
 		block.Statement = strings.TrimSpace(content)
-		block.Statement = strings.Trim(block.Statement, CodeDelim)
-		block.Statement = strings.TrimSpace(block.Statement)
 		return
 	}
 	if NumberPrefixReg.MatchString(content) {

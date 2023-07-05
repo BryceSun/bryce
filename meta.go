@@ -7,7 +7,7 @@ import (
 )
 
 type TextBlock struct {
-	Tittle    string `json:"Tittle" quiz:"head |下面进入<${Tittle}>部分"` // head用于表示只展示标签定义的内容
+	Tittle    string `json:"Tittle" quiz:"head confirm |下面进入<${Tittle}>部分"` // head用于表示只展示标签定义的内容
 	Attention string `json:"Attention" quiz:"confirm"`
 	Mnemonic  string `json:"Mnemonic" quiz:"check|请输入口诀:"`
 	Statement string `json:"Statement" quiz:"show"`
@@ -38,7 +38,7 @@ func (t *TextBlock) SetContent(s string) {
 		return
 	}
 	tree := t.subTree()
-	tree.Statement = s
+	tree.Statement = strings.TrimSuffix(s, "\n\r")
 }
 
 func (t *TextBlock) NewTree() dissolve.Tree {

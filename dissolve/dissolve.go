@@ -96,6 +96,9 @@ func fixTextCube(cube *textCube) {
 }
 
 func SplitText(text string) (content string, subs []*textCube) {
+	if strings.TrimSpace(text) == "" {
+		return
+	}
 	var indentReg *regexp.Regexp
 	for _, reg := range IndentRegs {
 		if reg.MatchString(text) {
