@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"math/rand"
 	"strconv"
 	"strings"
 	"time"
@@ -51,11 +50,12 @@ func showWith(doc *TextBlock) {
 	engine.RegisterGuardFilter(showWelcome)
 	engine.RegisterGuardFilter(showWrongEntrise)
 	engine.RegisterEntryFilter(printEmptyLine)
-	engine.RegisterEntryFilter(showSpendedTime)
+	//engine.RegisterEntryFilter(showSpendedTime)
 	engine.RegisterEntryFilter(setWrongEntrise)
 	engine.RegisterCoreFilter(setPath)
 	engine.RegisterOrder("K", skip)
 	engine.RegisterOrder("KK", skip2)
+	engine.RegisterOrder("KS", searchAndSkip)
 	engine.RegisterOrder("Q", skipToHead)
 	engine.RegisterOrder(quiz.EncourageFunKey, encourage)
 	engine.RegisterOrder(quiz.PraiseFunKey, praise)
@@ -83,7 +83,7 @@ func skip(e *quiz.TextEngine) (err error) {
 	if len(e.Input()) > 2 {
 		n, err = strconv.Atoi(e.Input()[2])
 		if err != nil {
-			return
+			return nil
 		}
 	}
 	e.SetSkipN(n)
@@ -93,9 +93,22 @@ func skip(e *quiz.TextEngine) (err error) {
 	return
 }
 
+func searchAndSkip(e *quiz.TextEngine) (err error) {
+	if len(e.Input()) < 3 {
+		return nil
+	}
+	s := e.Input()[2]
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return
+	}
+	e.LocalToSpecificSection(s)
+	return nil
+}
+
 func skip2(e *quiz.TextEngine) error {
 	if !e.LocateToNextSection() {
-		Prt.Println("此位置不支持进行此跳转!!")
+		Prt.Println("this action cannot be used at this point")
 	}
 	return nil
 }
@@ -138,23 +151,21 @@ func showSpendedTime(e *quiz.TextEngine) error {
 }
 
 func encourage(e *quiz.TextEngine) error {
-	Prt.Println(Encouragement[rand.Intn(6)])
+	//Prt.Println(Encouragement[rand.Intn(6)])
+	Prt.Println("回答错误！回答错误！回答错误！")
 	return nil
 }
 
 func praise(e *quiz.TextEngine) error {
-	Prt.Println(Praise[rand.Intn(6)])
+	//Prt.Println(Praise[rand.Intn(6)])
+	Prt.Println("恭喜你答对了！")
 	return nil
 }
 
 func printTittle(e *quiz.TextEngine) error {
 	entry := e.CurrentEntry()
-	//if entry.Kind == quiz.Test {
 	Prt.Print(entry.Tittle)
 	return nil
-	//}
-	//Prt.Println(entry.Tittle)
-	//return nil
 }
 
 func printStatement(e *quiz.TextEngine) (err error) {

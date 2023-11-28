@@ -12,7 +12,7 @@ type TextBlock struct {
 	Mnemonic  string `json:"Mnemonic" quiz:"check|请输入口诀:"`
 	Statement string `json:"Statement" quiz:"show"`
 	Question  string `json:"Question"`
-	Answer    string `json:"Answer" quiz:"check |\"${Question}\"的答案是:"`
+	Answer    string `json:"Answer" quiz:"check |\"${Question}\":"`
 	prev      *TextBlock
 	subBlocks []*TextBlock
 }
@@ -31,6 +31,10 @@ func (t *TextBlock) Subs() []quiz.QText {
 
 func (t *TextBlock) SetTittle(s string) {
 	t.Tittle = s
+}
+
+func (t *TextBlock) GetTittle() string {
+	return t.Tittle
 }
 
 func (t *TextBlock) SetContent(s string) {

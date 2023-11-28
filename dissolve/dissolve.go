@@ -30,6 +30,7 @@ type textCube struct {
 
 func (c textCube) fixTittle() {
 	c.Tittle = strings.TrimPrefix(c.Tittle, c.Indent)
+
 }
 
 // ParseFile 根据文件名打开文件并解析生成树

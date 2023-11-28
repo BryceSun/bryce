@@ -19,6 +19,7 @@ var (
 type Handler func(ctx *TextEngine) error
 
 type QText interface {
+	GetTittle() string
 	Prev() QText
 	Subs() []QText
 }
@@ -135,17 +136,52 @@ func (tc *TextEngine) LocateTo(text QText) {
 	tc.locText = text
 }
 
-// LocateToNextSection 重定位到下一文本块
+// LocateToNextSection locate to next text block
 func (tc *TextEngine) LocateToNextSection() bool {
 	if tc.locText == nil {
 		tc.locText = tc.CurrentText
 	}
 	tc.setLocIndex()
 	if tc.locToUpperText() {
-		if !tc.locToRighText() {
+		if !tc.locToRightText() {
 			return tc.LocateToNextSection()
 		}
 		return true
+	}
+	tc.locText = nil
+	return false
+}
+
+// LocalToSpecificSection locate to next text block
+func (tc *TextEngine) LocalToSpecificSection(s string) bool {
+	if strings.Contains(tc.CurrentText.GetTittle(), s) {
+		return false
+	}
+	tc.locText = tc.CurrentText
+	return tc.searchSpecificSection(s)
+}
+
+// LocalToSpecificSection locate to next text block
+func (tc *TextEngine) searchSpecificSection(s string) bool {
+	if strings.Contains(tc.locText.GetTittle(), s) {
+		return true
+	}
+	// search sub-trees of current text tree
+	for _, text := range tc.CurrentText.Subs() {
+		if strings.Contains(text.GetTittle(), s) {
+			return true
+		}
+	}
+	tc.setLocIndex()
+	// search brother tree
+	if tc.locToRightText() {
+		return tc.searchSpecificSection(s)
+	}
+	// search uncle tree
+	for tc.locToUpperText() {
+		if tc.locToRightText() {
+			return tc.searchSpecificSection(s)
+		}
 	}
 	tc.locText = nil
 	return false
@@ -186,7 +222,7 @@ func (tc *TextEngine) ShowQuizEntrys() {
 			}
 			continue
 		}
-		//测试题如果没被答对或是跳过则反复展示
+		//测试题如果没被答对则反复展示,除非跳过
 		for !tc.Right {
 			tc.eIndex = 0
 			//展示测试题目的前后调用拦截器
@@ -215,7 +251,8 @@ func checkEntry(tc *TextEngine) (err error) {
 		in := util.Scanln()
 		if in != "" {
 			tc.input = append(tc.input, in)
-			tc.input = append(tc.input, strings.Split(in, " ")...)
+			//tc.input = append(tc.input, strings.Split(in, " ")...)
+			tc.input = append(tc.input, strings.SplitN(in, " ", 2)...)
 		}
 	}
 	if tc.input[0] == entry.Content {
@@ -282,7 +319,7 @@ func (tc *TextEngine) locToUpperText() bool {
 	return true
 }
 
-func (tc *TextEngine) locToRighText() bool {
+func (tc *TextEngine) locToRightText() bool {
 	text := tc.locText
 	if reflect.ValueOf(text.Prev()).IsNil() {
 		return false
@@ -298,9 +335,9 @@ func (tc *TextEngine) locToRighText() bool {
 
 // 重定位或向父节点移动时需要调用此方法
 func (tc *TextEngine) setLocIndex() {
-	if tc.locText == nil {
-		tc.locText = tc.CurrentText
-	}
+	//if tc.locText == nil {
+	//	tc.locText = tc.CurrentText
+	//}
 	text := tc.locText
 	if reflect.ValueOf(text.Prev()).IsNil() {
 		tc.locIndex = 0
