@@ -53,6 +53,29 @@ func ChineseCount(str1 string) (count int) {
 	return
 }
 
+//func ShowLen(str1 string) int {
+//	n := 0
+//	for _, char := range str1 {
+//		if len(string(char)) > 2 {
+//			n += 1
+//		} else {
+//			n++
+//		}
+//	}
+//	return n
+//}
+
+func FirstChineseIndex(str1 string) int {
+	index := -1
+	for _, char := range str1 {
+		index++
+		if unicode.Is(unicode.Han, char) {
+			return index
+		}
+	}
+	return -1
+}
+
 func ChineseAlignNum(str1 string, num int) int {
 	count := ChineseCount(str1)
 	if count > num {

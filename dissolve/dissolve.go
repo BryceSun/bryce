@@ -32,7 +32,24 @@ func (c textCube) fixTittle() {
 	c.Tittle = strings.TrimPrefix(c.Tittle, c.Indent)
 
 }
-
+func quickSort(arr []int) []int {
+	if len(arr) < 2 {
+		return arr
+	}
+	left, right := 0, len(arr)-1
+	pivot := len(arr) / 2
+	arr[pivot], arr[right] = arr[right], arr[pivot]
+	for i := range arr {
+		if arr[i] < arr[right] {
+			arr[i], arr[left] = arr[left], arr[i]
+			left++
+		}
+	}
+	arr[left], arr[right] = arr[right], arr[left]
+	quickSort(arr[:left])
+	quickSort(arr[left+1:])
+	return arr
+}
 // ParseFile 根据文件名打开文件并解析生成树
 func ParseFile(filePath string, t Tree) error {
 	content, err := os.ReadFile(filePath)

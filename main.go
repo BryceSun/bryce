@@ -6,6 +6,8 @@ import (
 	"fmt"
 	_ "github.com/go-sql-driver/mysql"
 	"log"
+	"os"
+	"strings"
 )
 
 func main() {
@@ -15,6 +17,7 @@ func main() {
 	flag.Func("load", "used to show and test content from database", load)
 	flag.Func("list", "used to list text stored with database", list)
 	flag.Func("key", "used to input keymap", getKeyMap)
+	flag.Func("show", "used to show text line by line", showTypeEnglish)
 	flag.Parse()
 }
 
@@ -49,6 +52,43 @@ func load(s string) error {
 		showWith(document)
 	}
 	return nil
+}
+
+func showTypeEnglish(p string) error {
+	if strings.TrimSpace(p) == "" {
+		p = "./"
+	}
+	files, err := os.ReadDir(p)
+	if err != nil {
+		return err
+	}
+	err = LoadHistory(p)
+	if err != nil {
+		return err
+	}
+	go LogHistory()
+	var input string
+	for {
+		input = ""
+		for input == "" {
+			fn := ""
+			for _, file := range files {
+				fn = file.Name()
+				util.Rprintln(fn)
+			}
+			util.Lprint("请选择：" + fn)
+			fmt.Print("请选择：")
+			input = util.Scanln()
+		}
+		if input == "Q" {
+			return SaveHistory()
+		}
+		input = p + "\\" + input
+		err = ShowType(input)
+		if err != nil {
+			log.Print(err)
+		}
+	}
 }
 
 func list(string) error {

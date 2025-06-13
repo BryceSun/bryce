@@ -1,6 +1,11 @@
 package util
 
-import "fmt"
+import (
+	"fmt"
+	"github.com/buger/goterm"
+	"strconv"
+	"unicode/utf8"
+)
 
 type Printer struct {
 	Prefix string
@@ -47,4 +52,25 @@ func Print(a ...any) {
 
 func Sprint(a ...any) string {
 	return printer.Sprint(a...)
+}
+
+func Rprintln(s string) {
+	terminalWidth := goterm.Width()
+	n := utf8.RuneCountInString(s)
+	posit := strconv.Itoa((terminalWidth + n) / 2)
+	fmt.Printf("%"+posit+"s\n", s)
+}
+
+func Rprintlnx(s string) {
+	terminalWidth := goterm.Width()
+	n := utf8.RuneCountInString(s)
+	posit := strconv.Itoa((terminalWidth+n/2)/2 - 2)
+	fmt.Printf("%"+posit+"s\n", s)
+}
+
+func Lprint(s string) {
+	terminalWidth := goterm.Width()
+	n := utf8.RuneCountInString(s)
+	posit := strconv.Itoa((terminalWidth - n) / 2)
+	fmt.Printf("%"+posit+"s", "")
 }
