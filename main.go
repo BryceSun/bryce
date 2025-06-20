@@ -1,13 +1,14 @@
 package main
 
 import (
-	"example.com/bryce/util"
 	"flag"
 	"fmt"
-	_ "github.com/go-sql-driver/mysql"
 	"log"
 	"os"
 	"strings"
+
+	"example.com/bryce/util"
+	_ "github.com/go-sql-driver/mysql"
 )
 
 func main() {
@@ -16,7 +17,6 @@ func main() {
 	flag.Func("store", "used to store content of a file to database", store)
 	flag.Func("load", "used to show and test content from database", load)
 	flag.Func("list", "used to list text stored with database", list)
-	flag.Func("key", "used to input keymap", getKeyMap)
 	flag.Func("show", "used to show text line by line", showTypeEnglish)
 	flag.Parse()
 }

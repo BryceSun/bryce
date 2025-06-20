@@ -2,14 +2,15 @@ package main
 
 import (
 	"bufio"
-	"example.com/bryce/quiz"
-	"example.com/bryce/util"
 	"fmt"
 	"io"
 	"log"
 	"strconv"
 	"strings"
 	"time"
+
+	"example.com/bryce/quiz"
+	"example.com/bryce/util"
 )
 
 const (
